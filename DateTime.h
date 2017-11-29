@@ -13,8 +13,9 @@ class DateTime {
         time_t toTime() const;
         void setTime(time_t tValue);
 
-        std::string toString(const std::string &sFormat) const;
-        bool fromString(const std::string &sFormat, const std::string &sTime);
+        std::string toString(const std::string &sFormat, bool bLocal = false) const;
+        bool fromString(const std::string &sFormat, const std::string &sTime, bool bLocal = false);
+        bool operator==(const DateTime &dtLeft) const;
         
     protected:
         time_t tValue;

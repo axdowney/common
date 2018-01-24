@@ -41,4 +41,21 @@ class DatabaseObject {
         std::queue<std::shared_ptr<SQLQuery> > queueQueries;
 };
 
+
+template <size_t t, typename v >
+class Matrix {
+    protected:
+        std::list<Matrix<t - 1, v> > listOfMatrix;
+
+};
+
+template <typename v>
+class Matrix<0, v> {
+    protected:
+        std::list< v > listOfMatrix;
+};
+
+#define DECLARE_M(a) \
+
+
 #endif

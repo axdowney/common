@@ -61,10 +61,10 @@ std::string StringUtils::getExt(const std::string sFile) {
     return parts.size() > 1 ? parts.back() : std::string();
 }
 
-std::string StringUtils::replace(const std::string& str, const std::string& sReplace, std::string sReplaceWith) {
+std::string StringUtils::replace(const std::string& str, const std::string& sReplace, const std::string &sReplaceWith, bool bExact) {
     std::vector<std::string> vec;
     std::string sRet;
-    split(str, sReplace, vec, true, true);
+    split(str, sReplace, vec, bExact, true);
     combine(sRet, sReplaceWith, vec, true);
     return sRet;
 }

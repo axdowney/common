@@ -12,6 +12,10 @@
 
 std::string PireTable::SELECT_ALL = " * ";
 
+PireTable::PireTable()
+{
+}
+
 PireTable::PireTable(const std::string & sIP, const std::string & sUser, const std::string & sPassword)
 {
 	connect(sIP, sUser, sPassword);
@@ -67,7 +71,7 @@ std::string PireTable::getColumnName(int iCol) const
 
 int PireTable::generateTable()
 {
-	int iRet = false;
+	int iRet = -1;
 	if (con && con->isValid()) {
 		sQuery = getTableSQL();
 		std::shared_ptr<sql::Statement> stmt(con->createStatement());
@@ -101,16 +105,19 @@ void PireTable::clearSet()
 	sSet = "";
 }
 
-std::string PireTable::escapeString(const std::string & sEsc)
+std::string PireTable::escapeString(const std::string & sEsc) const
 {
 	std::string sRet;
 	if (con) {
 		sRet = dynamic_cast<sql::mysql::MySQL_Connection*>(con.get())->escapeString(sEsc);
 	}
+	else {
+		sRet = StringUtils::replace(sEsc, "'", "\\'");
+	}
 	return sRet;
 }
 
-std::string PireTable::quote(const std::string & sQuote)
+std::string PireTable::quote(const std::string & sQuote) const
 {
 	return "'" + escapeString(sQuote) + "'";
 }
@@ -229,6 +236,15 @@ void PireTable::addAggregateSelect(Aggregate e, int iCol, bool bAll)
 	sSelect += getColumnName(iCol) + " )";
 }
 
+void PireTable::addSelect(const SQLExpression & sqle)
+{
+	if (!sSelect.empty()) {
+		sSelect += ", ";
+	}
+
+	sSelect += sqle.toString();
+}
+
 void PireTable::clearSelect()
 {
 	sSelect = "";
@@ -242,6 +258,11 @@ std::string PireTable::getSelect() const
 std::string PireTable::getFrom() const
 {
 	return getTableName();
+}
+
+std::string PireTable::getWhere() const
+{
+	return sWhere;
 }
 
 std::shared_ptr<sql::ResultSet> PireTable::selectRows(bool bDistinct)
@@ -260,6 +281,9 @@ std::shared_ptr<sql::ResultSet> PireTable::selectRows(bool bDistinct)
 	return rs;
 }
 
+/**
+* Select Rows From Source
+*/
 std::vector< std::vector<std::string> > PireTable::selectRowStrings(bool bDistinct)
 {
 	std::vector< std::vector<std::string> > vecRows;
@@ -299,15 +323,26 @@ std::string PireTable::getSelectQuery(bool bDistinct) const
 	return sQuery;
 }
 
-bool PireTable::Union(const PireTable & table, bool bALL)
+bool PireTable::Union(const PireTable & table, bool bALL, bool bChain, bool bClear)
 {
 	bool bOK = getTableName() == table.getTableName();
 	if (bOK) {
-		sUnion = "( " + getSelectQuery() + " ) UNION ";
+		if (bChain && !sUnion.empty()) {
+			sUnion += " UNION ";
+		}
+		else {
+			sUnion = "( " + getSelectQuery() + " ) UNION ";
+		}
+
 		if (bALL) {
 			sUnion += "ALL ";
 		}
 		sUnion += "( " + table.getSelectQuery() + " )";
+
+		if (bClear) {
+			clearSelect();
+			clearWhere();
+		}
 	}
 	return bOK;
 }
@@ -406,6 +441,26 @@ void PireTable::addHaving(Operation eOp, Aggregate eAgg, int iCol, bool bAll, Ma
 std::map<int, std::string> PireTable::getColumnMap() const
 {
 	return mapCols;
+}
+
+size_t PireTable::getColumnCount() const
+{
+	return mapCols.size();
+}
+
+bool PireTable::setAlias(const std::string & sA)
+{
+	sAlias = sanitize(sA);
+	bool bOK = sAlias == sA;
+	if (!bOK) {
+		clearAlias();
+	}
+	return bOK;
+}
+
+void PireTable::clearAlias()
+{
+	sAlias.clear();
 }
 
 ModelTable::ModelTable(const std::string & sIP, const std::string & sUser, const std::string & sPassword) : PireTable(sIP, sUser, sPassword)
@@ -845,6 +900,37 @@ int JoinTable::getColumnIndex(int iTable, int iCol)
 	return iRet;
 }
 
+size_t JoinTable::getColumnCount() const
+{
+	size_t tRet = 0;
+	for (size_t i = 0; i < vecMapCols.size(); ++i) {
+		tRet += vecMapCols[i].size();
+	}
+
+	return tRet;
+}
+
+void JoinTable::beginTransaction()
+{
+	if (con) {
+		con->setAutoCommit(false);
+	}
+}
+
+bool JoinTable::endTransaction(bool bCommit)
+{
+	if (con) {
+		if (bCommit) {
+			con->commit();
+		}
+		else {
+			con->rollback();
+		}
+		con->setAutoCommit(true);
+	}
+	return con && bCommit;
+}
+
 SubQuery::SubQuery(const std::string & sIP, const std::string & sUser, const std::string & sPassword) : PireTable(sIP, sUser, sPassword)
 {
 }
@@ -900,3 +986,4 @@ void SubQuery::setColumnsFromSelect(std::string sSelect, std::string sTable)
 		mapCols[i] = sTmp;
 	}
 }
+

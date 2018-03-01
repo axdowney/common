@@ -8,4 +8,5 @@ class StringUtils {
         static void combine(std::string& str, const std::string& delim, const std::vector<std::string>& parts, bool bIncludeEmpty = false);
         static std::string getExt(const std::string sFile);
         static std::string replace(const std::string& str, const std::string& sReplace, const std::string &sReplaceWith, bool bExact = true);
+		static std::string under_scoreToCamelCase(const std::string &str);
 };

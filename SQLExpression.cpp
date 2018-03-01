@@ -1,64 +1,62 @@
 #include "SQLExpression.h"
-#include "PireTables.h"
+#include "SQLTable.h"
 
-SQLExpression::SQLExpression(const std::string & sVal)
+SQLExpression::SQLExpression(const std::string & sVal) : Expression(SQLTable().quote(sVal))
 {
-	sExpr = PireTable().quote(sVal);
 }
 
 SQLExpression::SQLExpression(const char * pc) : SQLExpression(pc ? std::string(pc) : std::string())
 {
 }
 
-SQLExpression::SQLExpression(double dVal)
-{
-	sExpr = std::to_string(dVal);
-}
-
-SQLExpression::SQLExpression(const PireTable & pt, int iCol) : sExpr(pt.getColumnName(iCol))
+SQLExpression::SQLExpression(double dVal) : Expression(dVal)
 {
 }
 
-SQLExpression::SQLExpression(const SQLExpression & sqle) : sExpr(sqle.sExpr), iNestLevel(sqle.iNestLevel)
+SQLExpression::SQLExpression(int iVal) : Expression(iVal)
 {
-	if (sExpr.empty()) {
-		sExpr = "''";
+}
+
+SQLExpression::SQLExpression(const SQLTable & pt, int iCol) {
+	sCore = pt.getColumnName(iCol);
+}
+
+SQLExpression::SQLExpression(const SQLExpression & sqle)
+{
+	if (!sqle) {
+		sCore = "''";
 	}
+	else {
+		sCore = sqle.sCore;
+		sLeft = sqle.sLeft;
+		sRight = sqle.sRight;
+	}
+}
+
+SQLExpression::SQLExpression(const SQLTable & pt) : Expression(pt.getSelectQuery())
+{
 }
 
 std::string SQLExpression::toString() const
 {
-	std::string sRet = sExpr;
-	for (int i = iNestLevel; i > 0; ++i) {
-		sRet += ")";
-	}
-	return sRet;
+	return Expression::toString();
 }
 
 SQLExpression & SQLExpression::openParen(bool bNot)
 {
-	if (bNot) {
-		sExpr + " " + PireTable::getOperation(PireTable::NOT);
-	}
-
-	sExpr += " (";
-	++iNestLevel;
+	
 	return *this;
 }
 
 SQLExpression & SQLExpression::closeParen()
 {
-	if (iNestLevel > 0) {
-		sExpr += ")";
-		--iNestLevel;
-	}
-
+	
 	return *this;
 }
 
 SQLExpression & SQLExpression::enclose()
 {
-	sExpr = "(" + sExpr + ")";
+	surround("(", ")");
 	return *this;
 }
 
@@ -349,7 +347,7 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eDIV:
 		sRet = "DIV";
 		break;
-	case SQLExpression::eeDivide:
+	case SQLExpression::eDivide:
 		sRet = "/";
 		break;
 	case SQLExpression::eELT:
@@ -415,6 +413,9 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 		break;
 	case SQLExpression::eGeomCollFromText:
 		sRet = "GeomCollFromText";
+		break;
+	case SQLExpression::eGeometryCollectionFromText:
+		sRet = "GeometryCollectionFromText";
 		break;
 	case SQLExpression::eGeomCollFromWKB:
 		sRet = "GeomCollFromWKB";
@@ -1068,6 +1069,12 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eST_GeomCollFromText:
 		sRet = "ST_GeomCollFromText";
 		break;
+	case SQLExpression::eST_GeometryCollectionFromText:
+		sRet = "ST_GeometryCollectionFromText";
+		break;
+	case SQLExpression::eST_GeomCollFromTxt:
+		sRet = "ST_GeomCollFromTxt";
+		break;
 	case SQLExpression::eST_GeomCollFromWKB:
 		sRet = "ST_GeomCollFromWKB";
 		break;
@@ -1398,7 +1405,7 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 
 std::string SQLExpression::buildFunctionString(SQLExpression::Function e, const SQLExpressionList & sqleList)
 {
-	std::string sRet = getFunction(e) + "(" + sqleList.getListString() + ")";
+	std::string sRet = getFunction(e) + "(" + sqleList.getListString(false) + ")";
 	return sRet;
 }
 
@@ -1413,446 +1420,485 @@ SQLExpression & SQLExpression::genericFunction(SQLExpression::Function e, const 
 {
 	SQLExpressionList sqlel = sqleList;
 	sqlel.push_front(*this);
+	sqlel.removeEmptyExpressions();
 	sqlel.updateString();
-	sExpr = buildFunctionString(e, sqlel);
+	sqlFunction(e, sqlel);
 	return *this;
 }
 
 SQLExpression::operator bool() const
 {
-	return !sExpr.empty();
+	return !toString().empty();
+}
+
+SQLExpression & SQLExpression::singleQuotes()
+{
+	sCore = "'" + SQLTable::escapeStringStatic(toString()) + "'";
+	clearEdges();
+	return *this;
+}
+
+SQLExpression & SQLExpression::doubleQuotes()
+{
+	sCore = "\"" + SQLTable::escapeStringStatic(toString()) + "\"";
+	clearEdges();
+	return *this;
+}
+
+void SQLExpression::sqlFunction(SQLExpression::Function e, const SQLExpressionList & sqleList)
+{
+	sLeft = getFunction(e) + "(";
+	std::string sTmp = sqleList.getListString(false);
+	if (!sTmp.empty()) {
+		if (!sCore.empty() || !sRight.empty()) {
+			sRight += ",";
+		}
+		sRight += sTmp;
+	}
+	sRight += ")";
+}
+
+void SQLExpression::sqlFunction(SQLExpression::Function e)
+{
+	sCore = getFunction(e) + "()";
+	sLeft = "";
+	sRight = "";
 }
 
 SQLExpression & SQLExpression::equal(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eEqual) + " " + sqle.toString();
+	generalOperation(getFunction(eEqual), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::equalNullSafe(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eEqualNullSafe) + " " + sqle.toString();
+	generalOperation(getFunction(eEqualNullSafe), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::notEqual(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eNotEq) + " " + sqle.toString();
+	generalOperation(getFunction(eNotEq), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::notEqualSQL(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eNotEqSQL) + " " + sqle.toString();
+	generalOperation(getFunction(eNotEqSQL), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::lessThanEq(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eLessThanEq) + " " + sqle.toString();
+	generalOperation(getFunction(eLessThanEq), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::lessThan(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eLessThan) + " " + sqle.toString();
+	generalOperation(getFunction(eLessThan), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::greaterThanEq(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eGreaterThanEq) + " " + sqle.toString();
+	generalOperation(getFunction(eGreaterThanEq), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::greaterThan(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eGreaterThan) + " " + sqle.toString();
+	generalOperation(getFunction(eGreaterThan), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::IS(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eIS) + " " + sqle.toString();
+	generalOperation(getFunction(eIS), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::IS_NOT(const SQLExpression & sqle)
 {
-	sExpr += " " + getFunction(eIS_NOT) + " " + sqle.toString();
+	generalOperation(getFunction(eIS_NOT), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::IS_NULL()
 {
-	sExpr += " " + getFunction(eIS_NULL);
+	generalOperation(getFunction(eIS_NULL), false);
 	return *this;
 }
 
 SQLExpression & SQLExpression::IS_NOT_NULL()
 {
-	sExpr += " " + getFunction(eIS_NOT_NULL);
+	sRight += " " + getFunction(eIS_NOT_NULL);
 	return *this;
 }
 
 SQLExpression & SQLExpression::BETWEEN(const SQLExpression & sqleMin, const SQLExpression & sqleMax)
 {
-	sExpr += " " + getFunction(eBETWEEN) + " " + sqleMin.toString() + " "
+	sRight += " " + getFunction(eBETWEEN) + " " + sqleMin.toString() + " "
 		+ getFunction(eAND) + " " + sqleMax.toString();
 	return *this;
 }
 
 SQLExpression & SQLExpression::NOT_BETWEEN(const SQLExpression & sqleMin, const SQLExpression & sqleMax)
 {
-	sExpr += " " + getFunction(eNOT) + " " + getFunction(eBETWEEN) + " " + sqleMin.toString() + " "
+	sRight += " " + getFunction(eNOT) + " " + getFunction(eBETWEEN) + " " + sqleMin.toString() + " "
 		+ getFunction(eAND) + " " + sqleMax.toString();
 	return *this;
 }
 
 SQLExpression & SQLExpression::GREATEST(const SQLExpressionList & sqleList)
 {
-	sExpr = buildFunctionString(eGREATEST, *this, sqleList);
+	sqlFunction(eGREATEST, sqleList);
 	return *this;
 }
 
 SQLExpression & SQLExpression::IN(const SQLExpressionList & sqleList)
 {
-	sExpr += " " + buildFunctionString(eIN, sqleList);
+	sRight += " " + buildFunctionString(eIN, sqleList);
 	return *this;
 }
 
 SQLExpression & SQLExpression::NOT_IN(const SQLExpressionList & sqleList)
 {
-	sExpr += " " + getFunction(eNOT) + " " + buildFunctionString(eIN, sqleList);
+	sRight += " " + getFunction(eNOT) + " " + buildFunctionString(eIN, sqleList);
 	return *this;
 }
 
 SQLExpression & SQLExpression::ISNULL()
 {
-	sExpr += " " + getFunction(eISNULL);
+	sRight += " " + getFunction(eISNULL);
 	return *this;
 }
 
 SQLExpression & SQLExpression::COALESCE(const SQLExpressionList & sqleList)
 {
-	sExpr = buildFunctionString(eCOALESCE, *this, sqleList);
+	sqlFunction(eCOALESCE, sqleList);
 	return *this;
 }
 
 SQLExpression & SQLExpression::INTERVAL(const SQLExpressionList & sqleList)
 {
-	sExpr = buildFunctionString(eINTERVAL, *this, sqleList);
+	sqlFunction(eINTERVAL, sqleList);
 	return *this;
 }
 
 SQLExpression & SQLExpression::LEAST(const SQLExpressionList & sqleList)
 {
-	sExpr = buildFunctionString(eLEAST, *this, sqleList);
+	sqlFunction(eLEAST, sqleList);
 	return *this;
 }
 
 SQLExpression & SQLExpression::LIKE(const SQLExpression & sqle, const SQLExpression & sqleEscape)
 {
-	sExpr += " " + getFunction(eLIKE) + " " + sqle.toString();
+	sRight += " " + getFunction(eLIKE) + " " + sqle.toString();
 	if (sqleEscape) {
-		sExpr += " ESCAPE " + sqleEscape.toString();
+		sRight += " ESCAPE " + sqleEscape.toString();
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::NOT_LIKE(const SQLExpression & sqle, const SQLExpression & sqleEscape)
 {
-	sExpr += " " + getFunction(eNOT) + " " + getFunction(eLIKE) + " " + sqle.toString();
+	sRight += " " + getFunction(eNOT) + " " + getFunction(eLIKE) + " " + sqle.toString();
 	if (sqleEscape) {
-		sExpr += " ESCAPE " + sqleEscape.toString();
+		sRight += " ESCAPE " + sqleEscape.toString();
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::STRCMP(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(eSTRCMP, { *this, sqle });
+	sqlFunction(eSTRCMP, { sqle });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DIV(const SQLExpression & sqle)
 {
-	sExpr += " DIV " + sqle.sExpr;
+	generalOperation(getFunction(eDIV), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::divide(const SQLExpression & sqle)
 {
-	sExpr += " / " + sqle.sExpr;
+	generalOperation(getFunction(eDivide), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::MOD(const SQLExpression & sqle)
 {
-	sExpr += " % " + sqle.sExpr;
+	generalOperation(getFunction(eMOD), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::add(const SQLExpression & sqle)
 {
-	sExpr += " + " + sqle.sExpr;
+	generalOperation(getFunction(eadd), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::multiply(const SQLExpression & sqle)
 {
-	sExpr += " * " + sqle.sExpr;
+	generalOperation(getFunction(eMultiply), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::subtract(const SQLExpression & sqle)
 {
-	sExpr += " - " + sqle.sExpr;
+	generalOperation(getFunction(eSubtract), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::ABS()
 {
-	sExpr = "ABS(" + sExpr + ")";
+	sqlFunction(eABS, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::ACOS()
 {
-	sExpr = "ACOS(" + sExpr + ")";
+	sqlFunction(eACOS, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::ASIN()
 {
-	sExpr = "ASIN(" + sExpr + ")";
+	sqlFunction(eASIN, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::ATAN()
 {
-	sExpr = "ATAN(" + sExpr + ")";
+	sqlFunction(eATAN, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::ATAN(const SQLExpression & sqleY)
 {
-	sExpr = "ATAN(" + sqleY.toString() + "," + sExpr + ")";
+	//sExpr = "ATAN(" + sqleY.toString() + "," + sExpr + ")";
+	sqlFunction(eATAN, {sqleY});
 	return *this;
 }
 
 SQLExpression & SQLExpression::ATAN2(const SQLExpression & sqleY)
 {
-	sExpr = "ATAN2(" + sqleY.toString() + "," + sExpr + ")";
+	//sExpr = "ATAN2(" + sqleY.toString() + "," + sExpr + ")";
+	sqlFunction(eATAN, {sqleY});
 	return *this;
 }
 
 SQLExpression & SQLExpression::CEIL()
 {
-	sExpr = "CEIL(" + sExpr + ")";
+	sqlFunction(eCEIL, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::CONV(const SQLExpression & sqleFromBase, const SQLExpression & sqleToBase)
 {
-	sExpr = "CONV(" + sExpr + "," + sqleFromBase.toString() + "," + sqleToBase.toString() + ")";
+	sqlFunction(eCONV, { sqleFromBase, sqleToBase });
 	return *this;
 }
 
 SQLExpression & SQLExpression::COS()
 {
-	sExpr = "COS(" + sExpr + ")";
+	sqlFunction(eCOS, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::COT()
 {
-	sExpr = "COT(" + sExpr + ")";
+	sqlFunction(eCOT, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::CRC32()
 {
-	sExpr = "CRC32(" + sExpr + ")";
+	sqlFunction(eCRC32, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::DEGREES()
 {
-	sExpr = "DEGREES(" + sExpr + ")";
+	sqlFunction(eDEGREES, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::EXP()
 {
-	sExpr = "EXP(" + sExpr + ")";
+	sqlFunction(eEXP, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::FLOOR()
 {
-	sExpr = "FLOOR(" + sExpr + ")";
+	sqlFunction(eFLOOR, {});
 	return *this;
 }
 
 /*SQLExpression & SQLExpression::FORMAT(const SQLExpression & sqlePrecision)
 {
-	sExpr = "FORMAT(" + sExpr + "," + sqlePrecision.toString() + ")";
+	sqlFunction(eFORMAT, { sqlePrecision });
 	return *this;
 }*/
 
 SQLExpression & SQLExpression::HEX()
 {
-	sExpr = "HEX(" + sExpr + ")";
+	sqlFunction(eHEX, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::LN()
 {
-	sExpr = "LN(" + sExpr + ")";
+	sqlFunction(eLN, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::LOG()
 {
-	sExpr = "LOG(" + sExpr + ")";
+	sqlFunction(eLOG, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::LOG(const SQLExpression & sqleBase)
 {
-	sExpr = "LOG(" + sExpr + "," + sqleBase.toString() + ")";
+	sqlFunction(eLOG, { sqleBase });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LOG2()
 {
-	sExpr = "LOG2(" + sExpr + ")";
+	sqlFunction(eLOG2, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::LOG10()
 {
-	sExpr = "LOG10(" + sExpr + ")";
+	sqlFunction(eLOG10, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::PI()
 {
-	sExpr = "PI()";
+	sCore = "PI()";
+	clearEdges();
 	return *this;
 }
 
 SQLExpression & SQLExpression::POW(const SQLExpression & sqleY)
 {
-	sExpr = "POW(" + sExpr + "," + sqleY.toString() + ")";
+	sqlFunction(ePOW, { sqleY });
 	return *this;
 }
 
 SQLExpression & SQLExpression::POWER(const SQLExpression & sqleY)
 {
-	sExpr = "POWER(" + sExpr + "," + sqleY.toString() + ")";
+	sqlFunction(ePOWER, { sqleY });
 	return *this;
 }
 
 SQLExpression & SQLExpression::RADIANS()
 {
-	sExpr = "RADIANS(" + sExpr + ")";
+	sqlFunction(eRADIANS, {});
 	return *this;
 }
 
+/* TODO make this better */
 SQLExpression & SQLExpression::RAND()
 {
-	sExpr = "RAND()";
+	sCore = buildFunctionString(eRAND, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::RAND(const SQLExpression & sqleSeed)
 {
-	sExpr = "ROUND(" + sqleSeed.toString() + ")";
+	sCore = buildFunctionString(eRAND, { sqleSeed });
 	return *this;
 }
 
 SQLExpression & SQLExpression::ROUND()
 {
-	sExpr = "ROUND()";
+	sqlFunction(eROUND, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::ROUND(const SQLExpression & sqlePrecision)
 {
-	sExpr = "(" + sExpr + "," + sqlePrecision.toString() + ")";
+	sqlFunction(eROUND, { sqlePrecision });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SIGN()
 {
-	sExpr = "SIGN(" + sExpr + ")";
+	sqlFunction(eSIGN, {});
 	return *this;
 }
 SQLExpression & SQLExpression::SIN()
 {
-	sExpr = "SIN(" + sExpr + ")";
+	sqlFunction(eSIN, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::SQRT()
 {
-	sExpr = "SQRT(" + sExpr + ")";
+	sqlFunction(eSQRT, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::TAN()
 {
-	sExpr = "TAN(" + sExpr + ")";
+	sqlFunction(eTAN, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::TRUNCATE(const SQLExpression & sqlePrecision)
 {
-	sExpr = "TRUNCATE(" + sExpr + ")";
+	sqlFunction(eTRUNCATE, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::ASCII()
 {
-	sExpr = "ASCII(" + sExpr + ")";
+	sqlFunction(eASCII, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::BIN()
 {
-	sExpr = "BIN(" + sExpr + ")";
+	sqlFunction(eBIN, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::BIT_LENGTH()
 {
-	sExpr = "BIT_LENGTH(" + sExpr + ")";
+	sqlFunction(eBIT_LENGTH, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::CHAR(const SQLExpression & sqleCharSet)
 {
-	sExpr = "CHAR(" + sExpr + " USING " + sqleCharSet.toString() + ")";
+	surround(getFunction(eCHAR) + "(", " USING " + sqleCharSet.toString() + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::CHAR_LENGTH()
 {
-	sExpr = "CHAR_LENGTH(" + sExpr + ")";
+	sqlFunction(eCHAR_LENGTH, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::CHARACTER_LENGTH()
 {
-	sExpr = "CHARACTER_LENGTH(" + sExpr + ")";
+	sqlFunction(eCHARACTER_LENGTH, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::CONCAT(const SQLExpression & sqleRight)
 {
-	sExpr = "CONCAT(" + sExpr + "," + sqleRight.toString() + ")";
+	sqlFunction(eCONCAT, { sqleRight });
 	return *this;
 }
 
@@ -1870,20 +1916,20 @@ SQLExpressionList::SQLExpressionList(SQLExpression params[], size_t i) : std::li
 
 SQLExpressionList & SQLExpressionList::updateString()
 {
-	sExpr = "";
+	sCore = "";
 	size_t t = this->size();
 
 	for (auto iter : static_cast<std::list<SQLExpression> >(*this)) {
-		if (!sExpr.empty()) {
-			sExpr += ",";
+		if (!sCore.empty()) {
+			sCore += ",";
 		}
 		std::string sTmp = iter.toString();
 		//sExpr += iter.toString();
-		sExpr += sTmp;
+		sCore += sTmp;
 	}
 
-	if (sExpr.empty()) {
-		sExpr = "''";
+	if (sCore.empty()) {
+		sCore = "''";
 	}
 	else {
 		//sExpr = "(" + sExpr + ")";
@@ -1892,26 +1938,44 @@ SQLExpressionList & SQLExpressionList::updateString()
 	return *this;
 }
 
-std::string SQLExpressionList::getListString() const
+std::string SQLExpressionList::getListString(bool bIncludeEmpty) const
 {
 	std::string sRet;
 	for (auto iter : static_cast<std::list<SQLExpression> >(*this)) {
-		if (!sRet.empty()) {
-			sRet += ",";
+		if (iter || bIncludeEmpty) {
+			if (!sRet.empty()) {
+				sRet += ",";
+			}
+			sRet += iter.toString();
 		}
-		sRet = iter.toString();
 	}
 	return sRet;
 }
 
+int SQLExpressionList::removeEmptyExpressions()
+{
+	int iRet = 0;
+	auto iter = begin();
+	while (iter != end()) {
+		if (iter->toString().empty()) {
+			erase(iter++);
+		}
+		else {
+			++iter;
+		}
+	}
+	return 0;
+}
+
 SQLExpression & SQLExpressionList::ELT(const SQLExpression & sqleIndex)
 {
-	return SQLExpressionList::ELT(sqleIndex, *this);
+	surround(getFunction(eELT) + "(" + sqleIndex.toString() + ",", ")");
+	return *this;
 }
 
 SQLExpression & SQLExpressionList::FIELD(const SQLExpression & sqle)
 {
-	sExpr = "FIELD(" + sqle.toString() + "," + sExpr + ")";
+	surround(getFunction(eFIELD) + "(" + sqle.toString() + ",", ")");
 	return *this;
 }
 
@@ -1927,7 +1991,7 @@ SQLExpression & SQLExpression::CONCAT(const SQLExpressionList & sqleRight)
 
 SQLExpression & SQLExpression::CONCAT_WS(const SQLExpression & sqleSeparator, const SQLExpression & sqleRight)
 {
-	sExpr = "CONCAT_WS(" + sqleSeparator.toString() + "," + sExpr + "," + sqleRight.toString() + ")";
+	surround(getFunction(eCONCAT_WS) + "(" + sqleSeparator.toString() + ",", "," + sqleRight.toString() + ")");
 	return *this;
 }
 
@@ -1936,98 +2000,85 @@ SQLExpression & SQLExpression::CONCAT_WS(const SQLExpression & sqleSeparator, co
 	return SQLExpression::CONCAT_WS(sqleSeparator, static_cast<SQLExpression>(sqleRight));
 }
 
-SQLExpression & SQLExpression::ELT(const SQLExpression & sqleIndex, const SQLExpressionList & sqleList)
+SQLExpression & SQLExpression::ELT(const SQLExpressionList & sqleList)
 {
-	sExpr = "ELT(" + sqleIndex.toString() + "," + sqleList.toString() + ")";
+	sqlFunction(eELT, sqleList);
 	return *this;
 }
 
 SQLExpression &SQLExpression::EXPORT_SET(const SQLExpression & sqleON, const SQLExpression & sqleOFF, const SQLExpression & sqleSep, const SQLExpression & sqleBitNum)
 {
-	sExpr = "EXPORT_SET(" + sExpr + "," + sqleON.toString() + "," + sqleOFF.toString();
-	if (!sqleSep.toString().empty()) {
-		sExpr += "," + sqleSep.toString();
-		if (!sqleBitNum.toString().empty()) {
-			sExpr += "," + sqleBitNum.toString();
-		}
-	}
-
-	sExpr += ")";
+	sqlFunction(eEXPORT_SET, { sqleON, sqleOFF, sqleSep, sqleBitNum });
 	return *this;
 }
 
 SQLExpression & SQLExpression::FIELD(const SQLExpressionList & sqleList)
 {
-	sExpr = "FIELD(" + sExpr + "," + sqleList.toString() + ")";
+	sqlFunction(eFIELD, sqleList);
 	return *this;
 }
 
-SQLExpression & SQLExpression::FIND_IN_SET(const SQLExpression & sqleList)
+SQLExpression & SQLExpression::FIND_IN_SET(const SQLExpressionList & sqleList)
 {
-	sExpr = "FIND_IN_SET(" + sExpr + "," + sqleList.toString() + ")";
+	sqlFunction(eFIND_IN_SET, sqleList);
 	return *this;
 }
 
 SQLExpression & SQLExpression::FORMAT(const SQLExpression & sqlePrecision, const SQLExpression & sqleLocal)
 {
-	sExpr = "FORMAT(" + sExpr + "," + sqlePrecision.toString();
-	if (!sqleLocal.toString().empty()) {
-		sExpr += "," + sqleLocal.toString();
-	}
-
-	sExpr += ")";
+	sqlFunction(eFORMAT, { sqlePrecision, sqleLocal });
 	return *this;
 }
 
 SQLExpression & SQLExpression::FROM_BASE64()
 {
-	sExpr = "FROM_BASE64(" + sExpr + ")";
+	sqlFunction(eFROM_BASE64, {});
 	return *this;
 }
 
 SQLExpression & SQLExpression::INSERT(const SQLExpression & sqlePos, const SQLExpression & sqleLen, const SQLExpression & sqleNewStr)
 {
-	sExpr = "INSERT(" + sExpr + "," + sqlePos.toString() + "," + sqleLen.toString() + "," + sqleNewStr.toString() + ")";
+	sqlFunction(eINSERT, { sqlePos, sqleLen, sqleNewStr });
 	return *this;
 }
 
 SQLExpression & SQLExpression::INSTR(const SQLExpression & sqleSubStr)
 {
-	sExpr = "INSTR(" + sExpr + "," + sqleSubStr.toString() + ")";
+	sqlFunction(eINSTR, { sqleSubStr });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LCASE()
 {
-	sExpr = buildFunctionString(eLCASE, { *this });
+	sqlFunction(eLCASE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LEFT(const SQLExpression & sqleLen)
 {
-	sExpr = buildFunctionString(eLEFT, { *this, sqleLen });
+	sqlFunction(eLEFT, { sqleLen });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LENGTH()
 {
-	sExpr = buildFunctionString(eLENGTH, { *this });
+	sqlFunction(eLENGTH, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LOAD_FILE()
 {
-	sExpr = buildFunctionString(eLOAD_FILE, { *this });
+	sqlFunction(eLOAD_FILE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LOCATE(const SQLExpression & sqleStr, const SQLExpression & sqlePos)
 {
 	if (sqlePos.toString().empty()) {
-		sExpr = buildFunctionString(eLOCATE, { *this, sqleStr });
+		sqlFunction(eLOCATE, { sqleStr });
 	}
 	else {
-		sExpr = buildFunctionString(eLOCATE, { *this, sqleStr, sqlePos });
+		sqlFunction(eLOCATE, { sqleStr, sqlePos });
 	}
 
 	return *this;
@@ -2035,19 +2086,19 @@ SQLExpression & SQLExpression::LOCATE(const SQLExpression & sqleStr, const SQLEx
 
 SQLExpression & SQLExpression::LOWER()
 {
-	sExpr = buildFunctionString(eLOWER, { *this });
+	sqlFunction(eLOWER, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LPAD(const SQLExpression & sqleLen, const SQLExpression & sqlePadStr)
 {
-	sExpr = buildFunctionString(eLPAD, { *this, sqleLen, sqlePadStr });
+	sqlFunction(eLPAD, { sqleLen, sqlePadStr });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LTRIM()
 {
-	sExpr = buildFunctionString(eLTRIM, { *this });
+	sqlFunction(eLTRIM, { });
 	return *this;
 }
 
@@ -2056,107 +2107,107 @@ SQLExpression & SQLExpression::MAKE_SET(const SQLExpressionList & sqleList)
 	SQLExpressionList sqlelTmp = sqleList;
 	sqlelTmp.push_front(*this);
 	sqlelTmp.updateString();
-	sExpr = buildFunctionString(eMAKE_SET, sqlelTmp);
+	sqlFunction(eMAKE_SET, sqlelTmp);
 	return *this;
 }
 
 SQLExpression & SQLExpression::MID(const SQLExpression & sqlePos, const SQLExpression & sqleLen)
 {
-	sExpr = buildFunctionString(eMID, { *this, sqlePos, sqleLen });
+	sqlFunction(eMID, { sqlePos, sqleLen });
 	return *this;
 }
 
 SQLExpression & SQLExpression::OCT()
 {
-	sExpr = buildFunctionString(eOCT, { *this });
+	sqlFunction(eOCT, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::OCTET_LENGTH()
 {
-	sExpr = buildFunctionString(eOCTET_LENGTH, { *this });
+	sqlFunction(eOCTET_LENGTH, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::ORD()
 {
-	sExpr = buildFunctionString(eORD, { *this });
+	sqlFunction(eORD, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::POSITION_IN(const SQLExpression & sqleStr)
 {
-	sExpr = "POSITION(" + sExpr + " IN " + sqleStr.toString() + ")";
+	surround(getFunction(ePOSITION) + "(", " " + getFunction(eIN) + " " + sqleStr.toString() + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::QUOTE()
 {
-	sExpr = buildFunctionString(eQUOTE, { *this });
+	sqlFunction(eQUOTE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::REPEAT(const SQLExpression & sqleCount)
 {
-	sExpr = buildFunctionString(eLOWER, { *this, sqleCount });
+	sqlFunction(eLOWER, { sqleCount });
 	return *this;
 }
 
 SQLExpression & SQLExpression::REPLACE(const SQLExpression & sqleFromStr, const SQLExpression & sqleToStr)
 {
-	sExpr = buildFunctionString(eREPLACE, { *this, sqleFromStr, sqleToStr });
+	sqlFunction(eREPLACE, { sqleFromStr, sqleToStr });
 	return *this;
 }
 
 SQLExpression & SQLExpression::REVERSE()
 {
-	sExpr = buildFunctionString(eREVERSE, { *this });
+	sqlFunction(eREVERSE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::RIGHT(const SQLExpression & sqleLen)
 {
-	sExpr = buildFunctionString(eRIGHT, { *this, sqleLen });
+	sqlFunction(eRIGHT, { sqleLen });
 	return *this;
 }
 
 SQLExpression & SQLExpression::RPAD(const SQLExpression & sqleLen, const SQLExpression & sqlePadStr)
 {
-	sExpr = buildFunctionString(eRPAD, { *this, sqleLen, sqlePadStr });
+	sqlFunction(eRPAD, { sqleLen, sqlePadStr });
 	return *this;
 }
 
 SQLExpression & SQLExpression::RTRIM()
 {
-	sExpr = buildFunctionString(eRTRIM, { *this });
+	sqlFunction(eRTRIM, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SOUNDEX()
 {
-	sExpr = buildFunctionString(eSOUNDEX, { *this });
+	sqlFunction(eSOUNDEX, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SOUNDS_LIKE(const SQLExpression & sqleStr)
 {
-	sExpr = getFunction(eSOUNDS_LIKE) + "(" + sExpr + " LIKE " + sqleStr.toString() + ")";
+	surround(getFunction(eSOUNDS_LIKE) + "("," LIKE " + sqleStr.toString() + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::SPACE()
 {
-	sExpr = buildFunctionString(eSPACE, { *this });
+	sqlFunction(eSPACE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SUBSTR(const SQLExpression & sqlePos, const SQLExpression & sqleLen)
 {
 	if (sqleLen.toString().empty()) {
-		sExpr = buildFunctionString(eSUBSTR, { *this, sqlePos });
+		sqlFunction(eSUBSTR, { sqlePos });
 	}
 	else {
-		sExpr = buildFunctionString(eSUBSTR, { *this, sqlePos, sqleLen });
+		sqlFunction(eSUBSTR, { sqlePos, sqleLen });
 	}
 	return *this;
 }
@@ -2164,23 +2215,23 @@ SQLExpression & SQLExpression::SUBSTR(const SQLExpression & sqlePos, const SQLEx
 SQLExpression & SQLExpression::SUBSTR_FROM_FOR(const SQLExpression & sqlePos, const SQLExpression & sqleLen)
 {
 	if (sqleLen.toString().empty()) {
-		sExpr = getFunction(eSUBSTR) + "(" + sExpr + " FROM " + sqlePos.toString() + ")";
+		surround(getFunction(eSUBSTR) + "(", " FROM " + sqlePos.toString() + ")");
 	}
 	else {
-		sExpr = getFunction(eSUBSTR) + "(" + sExpr + " FROM " + sqlePos.toString() + " FOR " + sqleLen.toString() + ")";
+		surround(getFunction(eSUBSTR) + "(", " FROM " + sqlePos.toString() + " FOR " + sqleLen.toString() + ")");
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::SUBSTRING_INDEX(const SQLExpression & sqleDelim, const SQLExpression & sqleCount)
 {
-	sExpr = buildFunctionString(eSUBSTRING_INDEX, { *this, sqleDelim, sqleCount });
+	sqlFunction(eSUBSTRING_INDEX, { sqleDelim, sqleCount });
 	return *this;
 }
 
 SQLExpression & SQLExpression::TO_BASE64()
 {
-	sExpr = buildFunctionString(eTO_BASE64, { *this });
+	sqlFunction(eTO_BASE64, { });
 	return *this;
 }
 
@@ -2214,66 +2265,66 @@ SQLExpression & SQLExpression::TRIM(TrimDir e, const SQLExpression & sqleRemStr)
 		sTmp += "FROM ";
 	}
 
-	sExpr = sTmp + sExpr + ")";
+	surround(sTmp, ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::UCASE()
 {
-	sExpr = buildFunctionString(eUCASE, { *this });
+	sqlFunction(eUCASE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::UNHEX()
 {
-	sExpr = buildFunctionString(eUNHEX, { *this });
+	sqlFunction(eUNHEX, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::UPPER()
 {
-	sExpr = buildFunctionString(eUPPER, { *this });
+	sqlFunction(eUPPER, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::WEIGHT_STRING(const std::vector<int>& vecLevel, const std::vector<WeightStringDir>& vecDir)
 {
-	sExpr = getFunction(eWEIGHT_STRING) + "(" + sExpr;
+	sLeft = getFunction(eWEIGHT_STRING) + "(" + sLeft;
 	if (!vecLevel.empty()) {
-		sExpr += " LEVEL ";
+		sRight += " LEVEL ";
 		for (int i = 0; i < vecLevel.size(); ++i) {
 			if (i > 0) {
-				sExpr += ", ";
+				sRight += ", ";
 			}
 
-			sExpr += std::to_string(vecLevel[i]);
+			sRight += std::to_string(vecLevel[i]);
 			if (i < vecDir.size()) {
 				if (vecDir[i] & WeightStringDir::eDirASC) {
-					sExpr += " ASC ";
+					sRight += " ASC ";
 				}
 				if (vecDir[i] & WeightStringDir::eDirDESC) {
-					sExpr += " DESC ";
+					sRight += " DESC ";
 				}
 				if (vecDir[i] & WeightStringDir::eDirREVERSE) {
-					sExpr += " REVERSE ";
+					sRight += " REVERSE ";
 				}
 			}
 		}
 	}
 
-	sExpr += ")";
+	sRight += ")";
 	return *this;
 }
 
 SQLExpression & SQLExpression::WEIGHT_STRING_AS_CHAR(const SQLExpression & sqleNum, const std::vector<int>& vecLevel, const std::vector<WeightStringDir>& vecDir)
 {
-	sExpr += " AS CHAR(" + sqleNum.toString() + ")";
+	sRight += " AS CHAR(" + sqleNum.toString() + ")";
 	return WEIGHT_STRING(vecLevel, vecDir);
 }
 
 SQLExpression & SQLExpression::WEIGHT_STRING_AS_BINARY(const SQLExpression & sqleNum, const std::vector<int>& vecLevel, const std::vector<WeightStringDir>& vecDir)
 {
-	sExpr += " AS BINARY(" + sqleNum.toString() + ")";
+	sRight += " AS BINARY(" + sqleNum.toString() + ")";
 	return WEIGHT_STRING(vecLevel, vecDir);
 }
 
@@ -2349,41 +2400,41 @@ std::string SQLExpression::getTimeUnit(TimeUnit e)
 
 SQLExpression & SQLExpression::ADDDATE(const SQLExpression & sqle, TimeUnit e)
 {
-	sExpr = "ADDDATE(" + sExpr + " INTERVAL " + sqle.toString() + " " + getTimeUnit(e) + ")";
+	surround(getFunction(eADDDATE) + "(", " INTERVAL " + sqle.toString() + " " + getTimeUnit(e) + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::ADDTIME(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(eADDTIME, { *this, sqle });
+	sqlFunction(eADDTIME, { sqle });
 	return *this;
 }
 
 SQLExpression & SQLExpression::CONVERT_TZ(const SQLExpression & sqleFromTZ, const SQLExpression & sqleToTZ)
 {
-	sExpr = buildFunctionString(eCONVERT_TZ, { *this, sqleFromTZ, sqleToTZ });
+	sqlFunction(eCONVERT_TZ, { sqleFromTZ, sqleToTZ });
 	return *this;
 }
 
 SQLExpression & SQLExpression::CURDATE()
 {
-	sExpr = buildFunctionString(eCURDATE, {});
+	sqlFunction(eCURDATE);
 	return *this;
 }
 
 SQLExpression & SQLExpression::CURRENT_DATE()
 {
-	sExpr = buildFunctionString(eCURRENT_DATE, {});
+	sqlFunction(eCURRENT_DATE);
 	return *this;
 }
 
 SQLExpression & SQLExpression::CURRENT_TIME(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP.toString().empty()) {
-		sExpr = buildFunctionString(eCURRENT_TIME, {});
+		sqlFunction(eCURRENT_TIME);
 	}
 	else {
-		sExpr = buildFunctionString(eCURRENT_TIME, { sqleFSP });
+		sqlFunction(eCURRENT_TIME, { sqleFSP });
 	}
 	return *this;
 }
@@ -2391,10 +2442,10 @@ SQLExpression & SQLExpression::CURRENT_TIME(const SQLExpression & sqleFSP)
 SQLExpression & SQLExpression::CURRENT_TIMESTAMP(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP.toString().empty()) {
-		sExpr = buildFunctionString(eCURRENT_TIMESTAMP, {});
+		sqlFunction(eCURRENT_TIMESTAMP);
 	}
 	else {
-		sExpr = buildFunctionString(eCURRENT_TIMESTAMP, { sqleFSP });
+		sqlFunction(eCURRENT_TIMESTAMP, { sqleFSP });
 	}
 	return *this;
 }
@@ -2402,117 +2453,117 @@ SQLExpression & SQLExpression::CURRENT_TIMESTAMP(const SQLExpression & sqleFSP)
 SQLExpression & SQLExpression::CURTIME(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP.toString().empty()) {
-		sExpr = buildFunctionString(eCURTIME, {});
+		sqlFunction(eCURTIME);
 	}
 	else {
-		sExpr = buildFunctionString(eCURTIME, { sqleFSP });
+		sqlFunction(eCURTIME, { sqleFSP });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::DATE()
 {
-	sExpr = buildFunctionString(eDATE, { *this });
+	sqlFunction(eDATE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DATEDIFF(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(eDATEDIFF, { *this, sqle });
+	sqlFunction(eDATEDIFF, { sqle });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DATE_ADD(const SQLExpression & sqle, TimeUnit e)
 {
-	sExpr = getFunction(eDATE_ADD) + "(" + sExpr + " INTERVAL " + sqle.toString() + " " + getTimeUnit(e) + ")";
+	surround(getFunction(eDATE_ADD) + "("," " + getFunction(eINTERVAL) + " " + sqle.toString() + " " + getTimeUnit(e) + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::DATE_FORMAT(const SQLExpression & sqleFormat)
 {
-	sExpr = buildFunctionString(eDATE_FORMAT, { *this, sqleFormat });
+	sqlFunction(eDATE_FORMAT, { sqleFormat });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DATE_SUB(const SQLExpression & sqle, TimeUnit e)
 {
-	sExpr = getFunction(eDATE_SUB) + "(" + sExpr + " INTERVAL " + sqle.toString() + " " + getTimeUnit(e) + ")";
+	surround(getFunction(eDATE_SUB) + "(", " INTERVAL " + sqle.toString() + " " + getTimeUnit(e) + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::DAY()
 {
-	sExpr = buildFunctionString(eDAY, { *this });
+	sqlFunction(eDAY, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DAYNAME()
 {
-	sExpr = buildFunctionString(eDAYNAME, { *this });
+	sqlFunction(eDAYNAME, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DAYOFMONTH()
 {
-	sExpr = buildFunctionString(eDAYOFMONTH, { *this });
+	sqlFunction(eDAYOFMONTH, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DAYOFWEEK()
 {
-	sExpr = buildFunctionString(eDAYOFWEEK, { *this });
+	sqlFunction(eDAYOFWEEK, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DAYOFYEAR()
 {
-	sExpr = buildFunctionString(eDAYOFYEAR, { *this });
+	sqlFunction(eDAYOFYEAR, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::EXTRACT(TimeUnit e)
 {
-	sExpr = getFunction(eEXTRACT) + "(" + getTimeUnit(e) + " FROM " + sExpr + ")";
+	surround(getFunction(eEXTRACT) + "(" + getTimeUnit(e) + " FROM ", ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::FROM_DAYS()
 {
-	sExpr = buildFunctionString(eFROM_DAYS, { *this });
+	sqlFunction(eFROM_DAYS, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::FROM_UNIXTIME()
 {
-	sExpr = buildFunctionString(eFROM_UNIXTIME, { *this });
+	sqlFunction(eFROM_UNIXTIME, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::GET_FORMAT(Function e)
 {
-	sExpr = getFunction(eGET_FORMAT) + "(" + getFunction(e) + ", " + sExpr + ")";
+	surround(getFunction(eGET_FORMAT) + "(" + getFunction(e) + ", ", ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::HOUR()
 {
-	sExpr = buildFunctionString(eHOUR, { *this });
+	sqlFunction(eHOUR, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LAST_DAY()
 {
-	sExpr = buildFunctionString(eLAST_DAY, { *this });
+	sqlFunction(eLAST_DAY, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::LOCALTIME(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP.toString().empty()) {
-		sExpr = buildFunctionString(eLOCALTIME, {});
+		sqlFunction(eLOCALTIME);
 	}
 	else {
-		sExpr = buildFunctionString(eLOCALTIME, { sqleFSP });
+		sqlFunction(eLOCALTIME, { sqleFSP });
 	}
 	return *this;
 }
@@ -2520,203 +2571,203 @@ SQLExpression & SQLExpression::LOCALTIME(const SQLExpression & sqleFSP)
 SQLExpression & SQLExpression::LOCALTIMESTAMP(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP.toString().empty()) {
-		sExpr = buildFunctionString(eLOCALTIMESTAMP, {});
+		sqlFunction(eLOCALTIMESTAMP);
 	}
 	else {
-		sExpr = buildFunctionString(eLOCALTIMESTAMP, { sqleFSP });
+		sqlFunction(eLOCALTIMESTAMP, { sqleFSP });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::MAKEDATE(const SQLExpression & sqleDayOfYear)
 {
-	sExpr = buildFunctionString(eMAKEDATE, { *this, sqleDayOfYear });
+	sqlFunction(eMAKEDATE, { sqleDayOfYear });
 	return *this;
 }
 
 SQLExpression & SQLExpression::MAKETIME(const SQLExpression & sqleMinute, const SQLExpression & sqleSecond)
 {
-	sExpr = buildFunctionString(eMAKETIME, { *this, sqleMinute, sqleSecond });
+	sqlFunction(eMAKETIME, { sqleMinute, sqleSecond });
 	return *this;
 }
 
 SQLExpression & SQLExpression::MICROSECOND()
 {
-	sExpr = buildFunctionString(eMICROSECOND, { *this });
+	sqlFunction(eMICROSECOND, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::MINUTE()
 {
-	sExpr = buildFunctionString(eMINUTE, { *this });
+	sqlFunction(eMINUTE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::MONTH()
 {
-	sExpr = buildFunctionString(eMONTH, { *this });
+	sqlFunction(eMONTH, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::MONTHNAME()
 {
-	sExpr = buildFunctionString(eMONTHNAME, { *this });
+	sqlFunction(eMONTHNAME, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::NOW(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP.toString().empty()) {
-		sExpr = buildFunctionString(eNOW, {});
+		sqlFunction(eNOW);
 	}
 	else {
-		sExpr = buildFunctionString(eNOW, { sqleFSP });
+		sqlFunction(eNOW, { sqleFSP });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::PERIOD_ADD(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(ePERIOD_ADD, { *this, sqle });
+	sqlFunction(ePERIOD_ADD, { sqle });
 	return *this;
 }
 
 SQLExpression & SQLExpression::PERIOD_DIFF(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(ePERIOD_DIFF, { *this });
+	sqlFunction(ePERIOD_DIFF, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::QUARTER()
 {
-	sExpr = buildFunctionString(eQUARTER, { *this });
+	sqlFunction(eQUARTER, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SECOND()
 {
-	sExpr = buildFunctionString(eSECOND, { *this });
+	sqlFunction(eSECOND, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SEC_TO_TIME()
 {
-	sExpr = buildFunctionString(eSEC_TO_TIME, { *this });
+	sqlFunction(eSEC_TO_TIME, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::STR_TO_DATE()
 {
-	sExpr = buildFunctionString(eSTR_TO_DATE, { *this });
+	sqlFunction(eSTR_TO_DATE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SUBDATE(const SQLExpression & sqle, TimeUnit e)
 {
-	sExpr = getFunction(eSUBDATE) + "(" + sExpr + " INTERVAL " + sqle.toString() + " " + getTimeUnit(e) + ")";
+	surround(getFunction(eSUBDATE) + "(", " INTERVAL " + sqle.toString() + " " + getTimeUnit(e) + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::SUBTIME(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(eSUBTIME, { *this, sqle });
+	sqlFunction(eSUBTIME, { sqle });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SYSDATE(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP.toString().empty()) {
-		sExpr = buildFunctionString(eSYSDATE, {});
+		sqlFunction(eSYSDATE);
 	}
 	else {
-		sExpr = buildFunctionString(eSYSDATE, { sqleFSP });
+		sqlFunction(eSYSDATE, { sqleFSP });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::TIME()
 {
-	sExpr = buildFunctionString(eTIME, { *this });
+	sqlFunction(eTIME, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::TIMEDIFF(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(eTIMEDIFF, { *this, sqle });
+	sqlFunction(eTIMEDIFF, { sqle });
 	return *this;
 }
 
 SQLExpression & SQLExpression::TIMESTAMP(const SQLExpression & sqle)
 {
 	if (sqle) {
-		sExpr = buildFunctionString(eTIMESTAMP, { *this, sqle });
+		sqlFunction(eTIMESTAMP, { sqle });
 	}
 	else {
-		sExpr = buildFunctionString(eTIMESTAMP, { *this });
+		sqlFunction(eTIMESTAMP, { });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::TIMESTAMPADD(TimeUnit e, const SQLExpression & sqleInterval)
 {
-	sExpr = getFunction(eTIMESTAMPADD) + "(" + getTimeUnit(e) + ", " + sExpr + ", " + sqleInterval.toString() + ")";
+	surround(getFunction(eTIMESTAMPADD) + "(" + getTimeUnit(e) + ", ", ", " + sqleInterval.toString() + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::TIMESTAMPDIFF(TimeUnit e, const SQLExpression & sqle)
 {
-	sExpr = getFunction(eTIMESTAMPDIFF) + "(" + getTimeUnit(e) + ", " + sExpr + ", " + sqle.toString() + ")";
+	surround(getFunction(eTIMESTAMPDIFF) + "(" + getTimeUnit(e) + ", ", ", " + sqle.toString() + ")");
 	return *this;
 }
 
 SQLExpression & SQLExpression::TIME_FORMAT(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(eTIME_FORMAT, { *this, sqle });
+	sqlFunction(eTIME_FORMAT, { sqle });
 	return *this;
 }
 
 SQLExpression & SQLExpression::TIME_TO_SEC()
 {
-	sExpr = buildFunctionString(eTIME_TO_SEC, { *this });
+	sqlFunction(eTIME_TO_SEC, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::TO_DAYS()
 {
-	sExpr = buildFunctionString(eTO_DAYS, { *this });
+	sqlFunction(eTO_DAYS, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::TO_SECONDS()
 {
-	sExpr = buildFunctionString(eTO_SECONDS, { *this });
+	sqlFunction(eTO_SECONDS, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::UNIX_TIMESTAMP(const SQLExpression & sqle)
 {
 	if (sqle) {
-		sExpr = buildFunctionString(eUNIX_TIMESTAMP, { *this, sqle });
+		sqlFunction(eUNIX_TIMESTAMP, { sqle });
 	}
 	else {
-		sExpr = buildFunctionString(eUNIX_TIMESTAMP, { *this });
+		sqlFunction(eUNIX_TIMESTAMP, { });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::UTC_DATE()
 {
-	sExpr = buildFunctionString(eUTC_DATE, {});
+	sqlFunction(eUTC_DATE);
 	return *this;
 }
 
 SQLExpression & SQLExpression::UTC_TIME(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP) {
-		sExpr = buildFunctionString(eUTC_TIME, { *this, sqleFSP });
+		sqlFunction(eUTC_TIME, { sqleFSP });
 	}
 	else {
-		sExpr = buildFunctionString(eUTC_TIME, { *this });
+		sqlFunction(eUTC_TIME, { });
 	}
 	return *this;
 }
@@ -2724,10 +2775,10 @@ SQLExpression & SQLExpression::UTC_TIME(const SQLExpression & sqleFSP)
 SQLExpression & SQLExpression::UTC_TIMESTAMP(const SQLExpression & sqleFSP)
 {
 	if (sqleFSP) {
-		sExpr = buildFunctionString(eUTC_TIMESTAMP, { *this, sqleFSP });
+		sqlFunction(eUTC_TIMESTAMP, { sqleFSP });
 	}
 	else {
-		sExpr = buildFunctionString(eUTC_TIMESTAMP, { *this });
+		sqlFunction(eUTC_TIMESTAMP, { });
 	}
 	return *this;
 }
@@ -2735,99 +2786,99 @@ SQLExpression & SQLExpression::UTC_TIMESTAMP(const SQLExpression & sqleFSP)
 SQLExpression & SQLExpression::WEEK(const SQLExpression & sqleMode)
 {
 	if (sqleMode) {
-		sExpr = buildFunctionString(eWEEK, { *this, sqleMode });
+		sqlFunction(eWEEK, { sqleMode });
 	}
 	else {
-		sExpr = buildFunctionString(eWEEK, { *this });
+		sqlFunction(eWEEK, { });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::WEEKDAY()
 {
-	sExpr = buildFunctionString(eWEEKDAY, { *this });
+	sqlFunction(eWEEKDAY, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::WEEKOFYEAR()
 {
-	sExpr = buildFunctionString(eWEEKOFYEAR, { *this });
+	sqlFunction(eWEEKOFYEAR, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::YEAR()
 {
-	sExpr = buildFunctionString(eYEAR, { *this });
+	sqlFunction(eYEAR, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::YEARWEEK()
 {
-	sExpr = buildFunctionString(eYEARWEEK, { *this });
+	sqlFunction(eYEARWEEK, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::EXTRACTVALUE(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(eExtractValue, { *this });
+	sqlFunction(eExtractValue, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::UPDATEXML(const SQLExpression & sqle)
 {
-	sExpr = buildFunctionString(eUpdateXML, { *this });
+	sqlFunction(eUpdateXML, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::BIT_COUNT()
 {
-	sExpr = buildFunctionString(eBIT_COUNT, { *this });
+	sqlFunction(eBIT_COUNT, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::BitwiseAnd(const SQLExpression &sqle)
 {
-	sExpr = sExpr + " " + getFunction(eBitwiseAnd) + " " + sqle.toString();
+	generalOperation(getFunction(eBitwiseAnd), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::BitwiseInvert()
 {
-	sExpr = getFunction(eBitwiseInvert) + " " + sExpr;
+	generalOperation(getFunction(eBitwiseInvert), true);
 	return *this;
 }
 
 SQLExpression & SQLExpression::BitwiseOr(const SQLExpression & sqle)
 {
-	sExpr = sExpr + " " + getFunction(eBitwiseOr) + " " + sqle.toString();
+	generalOperation(getFunction(eBitwiseOr), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::BitwiseXor(const SQLExpression & sqle)
 {
-	sExpr = sExpr + " " + getFunction(eBitwiseXor) + " " + sqle.toString();
+	generalOperation(getFunction(eBitwiseXor), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::LeftShift(const SQLExpression & sqle)
 {
-	sExpr = sExpr + " " + getFunction(eLeftShift) + " " + sqle.toString();
+	generalOperation(getFunction(eLeftShift), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::RightShift(const SQLExpression & sqle)
 {
-	sExpr = sExpr + " " + getFunction(eRightShift) + " " + sqle.toString();
+	generalOperation(getFunction(eRightShift), sqle.toString());
 	return *this;
 }
 
 SQLExpression & SQLExpression::AES_DECRYPT(const SQLExpression & sqleKey, const SQLExpression & sqleInitVec)
 {
 	if (sqleInitVec) {
-		sExpr = buildFunctionString(eAES_DECRYPT, { *this, sqleKey, sqleInitVec });
+		sqlFunction(eAES_DECRYPT, { sqleKey, sqleInitVec });
 	}
 	else {
-		sExpr = buildFunctionString(eAES_DECRYPT, { *this, sqleKey });
+		sqlFunction(eAES_DECRYPT, { sqleKey });
 	}
 	return *this;
 }
@@ -2835,27 +2886,27 @@ SQLExpression & SQLExpression::AES_DECRYPT(const SQLExpression & sqleKey, const 
 SQLExpression & SQLExpression::AES_ENCRYPT(const SQLExpression & sqleKey, const SQLExpression & sqleInitVec)
 {
 	if (sqleInitVec) {
-		sExpr = buildFunctionString(eAES_ENCRYPT, { *this, sqleKey, sqleInitVec });
+		sqlFunction(eAES_ENCRYPT, { sqleKey, sqleInitVec });
 	}
 	else {
-		sExpr = buildFunctionString(eAES_ENCRYPT, { *this, sqleKey });
+		sqlFunction(eAES_ENCRYPT, { sqleKey });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::COMPRESS()
 {
-	sExpr = buildFunctionString(eCOMPRESS, { *this });
+	sqlFunction(eCOMPRESS, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::DECODE(const SQLExpression &sqlePass)
 {
 	if (sqlePass) {
-		sExpr = buildFunctionString(eAES_ENCRYPT, { *this, sqlePass });
+		sqlFunction(eAES_ENCRYPT, { sqlePass });
 	}
 	else {
-		sExpr = buildFunctionString(eAES_ENCRYPT, { *this });
+		sqlFunction(eAES_ENCRYPT, { });
 	}
 	return *this;
 }
@@ -2863,10 +2914,10 @@ SQLExpression & SQLExpression::DECODE(const SQLExpression &sqlePass)
 SQLExpression & SQLExpression::DES_DECRYPT(const SQLExpression & sqleKey)
 {
 	if (sqleKey) {
-		sExpr = buildFunctionString(eAES_ENCRYPT, { *this, sqleKey });
+		sqlFunction(eAES_ENCRYPT, { sqleKey });
 	}
 	else {
-		sExpr = buildFunctionString(eAES_ENCRYPT, { *this });
+		sqlFunction(eAES_ENCRYPT, { });
 	}
 	return *this;
 }
@@ -2874,10 +2925,10 @@ SQLExpression & SQLExpression::DES_DECRYPT(const SQLExpression & sqleKey)
 SQLExpression & SQLExpression::DES_ENCRYPT(const SQLExpression & sqleKey)
 {
 	if (sqleKey) {
-		sExpr = buildFunctionString(eAES_DECRYPT, { *this, sqleKey });
+		sqlFunction(eAES_DECRYPT, { sqleKey });
 	}
 	else {
-		sExpr = buildFunctionString(eAES_DECRYPT, { *this });
+		sqlFunction(eAES_DECRYPT, { });
 	}
 	return *this;
 }
@@ -2885,10 +2936,10 @@ SQLExpression & SQLExpression::DES_ENCRYPT(const SQLExpression & sqleKey)
 SQLExpression & SQLExpression::ENCODE(const SQLExpression & sqlePass)
 {
 	if (sqlePass) {
-		sExpr = buildFunctionString(eENCODE, { *this, sqlePass });
+		sqlFunction(eENCODE, { sqlePass });
 	}
 	else {
-		sExpr = buildFunctionString(eENCODE, { *this });
+		sqlFunction(eENCODE, { });
 	}
 	return *this;
 }
@@ -2896,170 +2947,170 @@ SQLExpression & SQLExpression::ENCODE(const SQLExpression & sqlePass)
 SQLExpression & SQLExpression::ENCRYPT(const SQLExpression & sqleSalt)
 {
 	if (sqleSalt) {
-		sExpr = buildFunctionString(eENCRYPT, { *this, sqleSalt });
+		sqlFunction(eENCRYPT, { sqleSalt });
 	}
 	else {
-		sExpr = buildFunctionString(eENCRYPT, { *this });
+		sqlFunction(eENCRYPT, { });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::MD5()
 {
-	sExpr = buildFunctionString(eMD5, { *this });
+	sqlFunction(eMD5, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::OLD_PASSWORD()
 {
-	sExpr = buildFunctionString(eOLD_PASSWORD, { *this });
+	sqlFunction(eOLD_PASSWORD, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::PASSWORD()
 {
-	sExpr = buildFunctionString(ePASSWORD, { *this });
+	sqlFunction(ePASSWORD, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::RANDOM_BYTES()
 {
-	sExpr = buildFunctionString(eRANDOM_BYTES, { *this });
+	sqlFunction(eRANDOM_BYTES, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SHA1()
 {
-	sExpr = buildFunctionString(eSHA1, { *this });
+	sqlFunction(eSHA1, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::SHA2(const SQLExpression & sqleHashLen)
 {
-	sExpr = buildFunctionString(eSHA2, { *this, sqleHashLen });
+	sqlFunction(eSHA2, { sqleHashLen });
 	return *this;
 }
 
 SQLExpression & SQLExpression::UNCOMPRESS()
 {
-	sExpr = buildFunctionString(eUNCOMPRESS, { *this });
+	sqlFunction(eUNCOMPRESS, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::VALIDATE_PASSWORD_STRENGTH()
 {
-	sExpr = buildFunctionString(eVALIDATE_PASSWORD_STRENGTH, { *this });
+	sqlFunction(eVALIDATE_PASSWORD_STRENGTH, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::BENCHMARK(const SQLExpression & sqleCount)
 {
-	sExpr = buildFunctionString(eBENCHMARK, { sqleCount, *this });
+	sqlFunction(eBENCHMARK, { sqleCount });
 	return *this;
 }
 
 SQLExpression & SQLExpression::CHARSET()
 {
-	sExpr = buildFunctionString(eCHARSET, { *this });
+	sqlFunction(eCHARSET, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::COERCIBILITY()
 {
-	sExpr = buildFunctionString(eCOERCIBILITY, { *this });
+	sqlFunction(eCOERCIBILITY, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::COLLATION()
 {
-	sExpr = buildFunctionString(eCOLLATION, { *this });
+	sqlFunction(eCOLLATION, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::CONNECTION_ID()
 {
-	sExpr = buildFunctionString(eCONNECTION_ID, {});
+	sqlFunction(eCONNECTION_ID);
 	return *this;
 }
 
 SQLExpression & SQLExpression::CURRENT_USER()
 {
-	sExpr = buildFunctionString(eCURRENT_USER, {});
+	sqlFunction(eCURRENT_USER);
 	return *this;
 }
 
 SQLExpression & SQLExpression::DATABASE()
 {
-	sExpr = buildFunctionString(eDATABASE, {});
+	sqlFunction(eDATABASE);
 	return *this;
 }
 
 SQLExpression & SQLExpression::FOUND_ROWS()
 {
-	sExpr = buildFunctionString(eFOUND_ROWS, {});
+	sqlFunction(eFOUND_ROWS);
 	return *this;
 }
 
 SQLExpression & SQLExpression::LAST_INSERT_ID(const SQLExpression & sqle)
 {
 	if (sqle) {
-		sExpr = buildFunctionString(eLAST_INSERT_ID, { sqle });
+		sqlFunction(eLAST_INSERT_ID, { sqle });
 	}
 	else {
-		sExpr = buildFunctionString(eLAST_INSERT_ID, {});
+		sqlFunction(eLAST_INSERT_ID);
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::ROW_COUNT()
 {
-	sExpr = buildFunctionString(eROW_COUNT, {});
+	sqlFunction(eROW_COUNT);
 	return *this;
 }
 
 SQLExpression & SQLExpression::SCHEMA()
 {
-	sExpr = buildFunctionString(eSCHEMA, {});
+	sqlFunction(eSCHEMA);
 	return *this;
 }
 
 SQLExpression & SQLExpression::SESSION_USER()
 {
-	sExpr = buildFunctionString(eSESSION_USER, {});
+	sqlFunction(eSESSION_USER);
 	return *this;
 }
 
 SQLExpression & SQLExpression::SYSTEM_USER()
 {
-	sExpr = buildFunctionString(eSYSTEM_USER, {});
+	sqlFunction(eSYSTEM_USER);
 	return *this;
 }
 
 SQLExpression & SQLExpression::USER()
 {
-	sExpr = buildFunctionString(eUSER, {});
+	sqlFunction(eUSER);
 	return *this;
 }
 
 SQLExpression & SQLExpression::VERSION()
 {
-	sExpr = buildFunctionString(eVERSION, {});
+	sqlFunction(eVERSION);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_QUOTE()
 {
-	sExpr = buildFunctionString(eJSON_QUOTE, { *this });
+	sqlFunction(eJSON_QUOTE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_CONTAINS(const SQLExpression & sqleCandidate, const SQLExpression & sqlePath)
 {
 	if (sqlePath) {
-		sExpr = buildFunctionString(eJSON_QUOTE, { *this, sqleCandidate, sqlePath });
+		sqlFunction(eJSON_QUOTE, { sqleCandidate, sqlePath });
 	}
 	else {
-		sExpr = buildFunctionString(eJSON_CONTAINS, { *this, sqleCandidate });
+		sqlFunction(eJSON_CONTAINS, { sqleCandidate });
 	}
 	return *this;
 }
@@ -3068,23 +3119,23 @@ SQLExpression & SQLExpression::JSON_CONTAINS(const SQLExpression & sqleCandidate
 
 SQLExpression & SQLExpression::JSON_ExtractOp(const SQLExpression & sqle)
 {
-	sExpr += getFunction(eJSON_ExtractOp) + sqle.toString();
+	sLeft += getFunction(eJSON_ExtractOp) + sqle.toString();
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_UnquoteExtractOp(const SQLExpression & sqle)
 {
-	sExpr += getFunction(eJSON_UnquoteExtractOp) + sqle.toString();
+	sLeft += getFunction(eJSON_UnquoteExtractOp) + sqle.toString();
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_KEYS(const SQLExpression & sqlePath)
 {
 	if (sqlePath) {
-		sExpr = buildFunctionString(eJSON_KEYS, { *this, sqlePath });
+		sqlFunction(eJSON_KEYS, { sqlePath });
 	}
 	else {
-		sExpr = buildFunctionString(eJSON_KEYS, { *this });
+		sqlFunction(eJSON_KEYS, { });
 	}
 	return *this;
 }
@@ -3092,146 +3143,146 @@ SQLExpression & SQLExpression::JSON_KEYS(const SQLExpression & sqlePath)
 SQLExpression & SQLExpression::JSON_SEARCH(const SQLExpression & sqleOneAll, const SQLExpression & sqlePath)
 {
 	if (sqlePath) {
-		sExpr = buildFunctionString(eJSON_SEARCH, { *this, sqleOneAll, sqlePath });
+		sqlFunction(eJSON_SEARCH, { sqleOneAll, sqlePath });
 	}
 	else {
-		sExpr = buildFunctionString(eJSON_SEARCH, { *this, sqleOneAll });
+		sqlFunction(eJSON_SEARCH, { sqleOneAll });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_APPEND(const SQLExpressionList & sqlelPathValPairs)
 {
-	sExpr = buildFunctionString(eJSON_APPEND, *this, sqlelPathValPairs);
+	sqlFunction(eJSON_APPEND, sqlelPathValPairs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_ARRAY_APPEND(const SQLExpressionList & sqlelPathValPairs)
 {
-	sExpr = buildFunctionString(eJSON_ARRAY_APPEND, *this, sqlelPathValPairs);
+	sqlFunction(eJSON_ARRAY_APPEND, sqlelPathValPairs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_ARRAY_INSERT(const SQLExpressionList & sqlelPathValPairs)
 {
-	sExpr = buildFunctionString(eJSON_ARRAY_INSERT, *this, sqlelPathValPairs);
+	sqlFunction(eJSON_ARRAY_INSERT, sqlelPathValPairs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_INSERT(const SQLExpressionList & sqlelPathValPairs)
 {
-	sExpr = buildFunctionString(eJSON_INSERT, *this, sqlelPathValPairs);
+	sqlFunction(eJSON_INSERT, sqlelPathValPairs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_MERGE(const SQLExpressionList & sqleDocs)
 {
-	sExpr = buildFunctionString(eJSON_MERGE, *this, sqleDocs);
+	sqlFunction(eJSON_MERGE, sqleDocs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_MERGE_PATCH(const SQLExpressionList & sqleDocs)
 {
-	sExpr = buildFunctionString(eJSON_MERGE_PATCH, *this, sqleDocs);
+	sqlFunction(eJSON_MERGE_PATCH, sqleDocs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_MERGE_PRESERVE(const SQLExpressionList & sqleDocs)
 {
-	sExpr = buildFunctionString(eJSON_MERGE_PRESERVE, *this, sqleDocs);
+	sqlFunction(eJSON_MERGE_PRESERVE, sqleDocs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_REMOVE(const SQLExpressionList & sqleDocs)
 {
-	sExpr = buildFunctionString(eJSON_REMOVE, *this, sqleDocs);
+	sqlFunction(eJSON_REMOVE, sqleDocs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_REPLACE(const SQLExpressionList & sqlelPathValPairs)
 {
-	sExpr = buildFunctionString(eJSON_REPLACE, *this, sqlelPathValPairs);
+	sqlFunction(eJSON_REPLACE, sqlelPathValPairs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_SET(const SQLExpressionList & sqlelPathValPairs)
 {
-	sExpr = buildFunctionString(eJSON_SET, *this, sqlelPathValPairs);
+	sqlFunction(eJSON_SET, sqlelPathValPairs);
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_UNQUOTE()
 {
-	sExpr = buildFunctionString(eJSON_UNQUOTE, { *this });
+	sqlFunction(eJSON_UNQUOTE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_DEPTH()
 {
-	sExpr = buildFunctionString(eJSON_DEPTH, { *this });
+	sqlFunction(eJSON_DEPTH, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_LENGTH(const SQLExpression & sqlePath)
 {
 	if (sqlePath) {
-		sExpr = buildFunctionString(eJSON_LENGTH, { *this, sqlePath });
+		sqlFunction(eJSON_LENGTH, { sqlePath });
 	}
 	else {
-		sExpr = buildFunctionString(eJSON_LENGTH, { *this });
+		sqlFunction(eJSON_LENGTH, { });
 	}
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_TYPE()
 {
-	sExpr = buildFunctionString(eJSON_TYPE, { *this });
+	sqlFunction(eJSON_TYPE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_VALID()
 {
-	sExpr = buildFunctionString(eJSON_VALID, { *this });
+	sqlFunction(eJSON_VALID, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_PRETTY()
 {
-	sExpr = buildFunctionString(eJSON_PRETTY, { *this });
+	sqlFunction(eJSON_PRETTY, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::JSON_STORAGE_SIZE()
 {
-	sExpr = buildFunctionString(eJSON_STORAGE_SIZE, { *this });
+	sqlFunction(eJSON_STORAGE_SIZE, { });
 	return *this;
 }
 
 SQLExpression & SQLExpression::GTID_SET(const SQLExpression & sqleSubSet)
 {
-	sExpr = buildFunctionString(eGTID_SUBSET, { sqleSubSet, *this });
+	sqlFunction(eGTID_SUBSET, { sqleSubSet });
 	return *this;
 }
 
 SQLExpression & SQLExpression::GTID_SUBSET(const SQLExpression & sqleSet)
 {
-	sExpr = buildFunctionString(eGTID_SUBSET, { *this, sqleSet });
+	sqlFunction(eGTID_SUBSET, { sqleSet });
 	return *this;
 }
 
 SQLExpression & SQLExpression::GTID_SUBTRACT(const SQLExpression & sqleSubSet)
 {
-	sExpr = buildFunctionString(eGTID_SUBTRACT, { *this, sqleSubSet });
+	sqlFunction(eGTID_SUBTRACT, { sqleSubSet });
 	return *this;
 }
 
 SQLExpression & SQLExpression::WAIT_FOR_EXECUTED_GTID_SET(const SQLExpression & sqleTimeout)
 {
 	if (sqleTimeout) {
-		sExpr = buildFunctionString(eWAIT_FOR_EXECUTED_GTID_SET, { *this, sqleTimeout });
+		sqlFunction(eWAIT_FOR_EXECUTED_GTID_SET, { sqleTimeout });
 	}
 	else {
-		sExpr = buildFunctionString(eWAIT_FOR_EXECUTED_GTID_SET, { *this });
+		sqlFunction(eWAIT_FOR_EXECUTED_GTID_SET, { });
 	}
 
 	return *this;
@@ -3239,7 +3290,7 @@ SQLExpression & SQLExpression::WAIT_FOR_EXECUTED_GTID_SET(const SQLExpression & 
 
 SQLExpression & SQLExpression::WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(const SQLExpression & sqleTimeout, const SQLExpression & sqleChannel)
 {
-	SQLExpressionList sqlelTmp = { *this };
+	SQLExpressionList sqlelTmp = { };
 	if (sqleTimeout) {
 		sqlelTmp.push_back(sqleTimeout);
 	}
@@ -3249,6 +3300,194 @@ SQLExpression & SQLExpression::WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(const SQLExpres
 	}
 	
 	sqlelTmp.updateString();
-	sExpr = buildFunctionString(eWAIT_UNTIL_SQL_THREAD_AFTER_GTIDS, sqlelTmp);
+	sqlFunction(eWAIT_UNTIL_SQL_THREAD_AFTER_GTIDS, sqlelTmp);
 	return *this;
 }
+
+SQLExpression & SQLExpression::ST_GeomCollFromText(const SQLExpression & sqleSrid)
+{
+	if (sqleSrid) {
+		sqlFunction(eST_GeomCollFromText, { sqleSrid });
+	}
+	else {
+		sqlFunction(eST_GeomCollFromText, { });
+	}
+
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeometryCollectionFromText(const SQLExpression & sqleSrid)
+{
+	if (sqleSrid) {
+		sqlFunction(eST_GeometryCollectionFromText, { sqleSrid });
+	}
+	else {
+		sqlFunction(eST_GeometryCollectionFromText, { });
+	}
+
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeomCollFromTxt(const SQLExpression & sqleSrid)
+{
+	if (sqleSrid) {
+		sqlFunction(eST_GeomCollFromTxt, { sqleSrid });
+	}
+	else {
+		sqlFunction(eST_GeomCollFromTxt, { });
+	}
+
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeomCollFromText(const SQLExpression & sqleSrid)
+{
+	if (sqleSrid) {
+		sqlFunction(eGeomCollFromText, { sqleSrid });
+	}
+	else {
+		sqlFunction(eGeomCollFromText, { });
+	}
+
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeometryCollectionFromText(const SQLExpression & sqleSrid)
+{
+	if (sqleSrid) {
+		sqlFunction(eGeometryCollectionFromText, { sqleSrid });
+	}
+	else {
+		sqlFunction(eGeometryCollectionFromText, { });
+	}
+
+	return *this;
+}
+
+SQLExpression & SQLExpression::ANY_VALUE()
+{
+	sqlFunction(eANY_VALUE, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::DEFAULT()
+{
+	sqlFunction(eDEFAULT, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GET_LOCK(const SQLExpression & sqleTimeout)
+{
+	sqlFunction(eGET_LOCK, { sqleTimeout });
+	return *this;
+}
+
+SQLExpression & SQLExpression::INET_ATON()
+{
+	sqlFunction(eINET_ATON, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::INET_NTOA()
+{
+	sqlFunction(eINET_NTOA, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::INET6_ATON()
+{
+	sqlFunction(eINET6_ATON, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::INET6_NTOA()
+{
+	sqlFunction(eINET6_NTOA, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::IS_FREE_LOCK()
+{
+	sqlFunction(eIS_FREE_LOCK, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::IS_IPV4()
+{
+	sqlFunction(eIS_IPV4, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::IS_IPV4_COMPAT()
+{
+	sqlFunction(eIS_IPV4_COMPAT, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::IS_IPV4_MAPPED()
+{
+	sqlFunction(eIS_IPV4_MAPPED, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::IS_IPV6()
+{
+	sqlFunction(eIS_IPV6, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::IS_USED_LOCK()
+{
+	sqlFunction(eIS_USED_LOCK, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MASTER_POS_WAIT(const SQLExpression & sqlePos, const SQLExpression & sqleTimeout, const SQLExpression & sqleChannel)
+{
+	sqlFunction(eMASTER_POS_WAIT, { sqlePos, sqleTimeout, sqleChannel });
+	return *this;
+}
+
+SQLExpression & SQLExpression::NAME_CONST(const SQLExpression & sqleValue)
+{
+	sqlFunction(eNAME_CONST, { sqleValue });
+	return *this;
+}
+
+SQLExpression & SQLExpression::RELEASE_ALL_LOCKS()
+{
+	sqlFunction(eRELEASE_ALL_LOCKS);
+	return *this;
+}
+
+SQLExpression & SQLExpression::RELEASE_LOCK()
+{
+	sqlFunction(eRELEASE_LOCK, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::SLEEP()
+{
+	sqlFunction(eSLEEP, { });
+	return *this;
+}
+
+SQLExpression & SQLExpression::UUID()
+{
+	sqlFunction(eUUID);
+	return *this;
+}
+
+SQLExpression & SQLExpression::UUID_SHORT()
+{
+	sqlFunction(eUUID_SHORT);
+	return *this;
+}
+
+SQLExpression & SQLExpression::VALUES(const SQLExpressionList & sqlel)
+{
+	sqlFunction(eVALUES, sqlel);
+	return *this;
+}
+
+

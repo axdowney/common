@@ -68,3 +68,14 @@ std::string StringUtils::replace(const std::string& str, const std::string& sRep
     combine(sRet, sReplaceWith, vec, true);
     return sRet;
 }
+
+std::string StringUtils::under_scoreToCamelCase(const std::string &str) {
+	std::vector<std::string> vec;
+	std::string sRet;
+	split(str, "_", vec, true, false);
+	for (int i = 0; i < vec.size(); ++i) {
+		vec[i][0] = toupper(vec[i][0]);
+	}
+	combine(sRet, "", vec, false);
+	return sRet;
+}

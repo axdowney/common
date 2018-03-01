@@ -5,11 +5,11 @@
 #include <list>
 #include <string>
 #include <vector>
-
-//#include "PireTables.h"
-class PireTable;
+#include "Expression.h"
+//#include "SQLTables.h"
+class SQLTable;
 class SQLExpressionList;
-class SQLExpression {
+class SQLExpression : public Expression {
 public:
 	enum Function {
 		eFirst = 0,
@@ -108,7 +108,7 @@ public:
 		eDisjoint,
 		eDistance,
 		eDIV,
-		eeDivide,
+		eDivide,
 		eELT,
 		eENCODE,
 		eENCRYPT,
@@ -131,6 +131,7 @@ public:
 		eFROM_DAYS,
 		eFROM_UNIXTIME,
 		eGeomCollFromText,
+		eGeometryCollectionFromText,
 		eGeomCollFromWKB,
 		eGeometryCollection,
 		eGeometryN,
@@ -351,6 +352,8 @@ public:
 		eST_ExteriorRing,
 		eST_GeoHash,
 		eST_GeomCollFromText,
+		eST_GeometryCollectionFromText,
+		eST_GeomCollFromTxt,
 		eST_GeomCollFromWKB,
 		eST_GeometryN,
 		eST_GeometryType,
@@ -464,8 +467,10 @@ public:
 	SQLExpression(const std::string &sVal);
 	SQLExpression(const char *pc);
 	SQLExpression(double dVal);
-	SQLExpression(const PireTable &pt, int iCol);
+	SQLExpression(int iVal);
+	SQLExpression(const SQLTable &pt, int iCol);
 	SQLExpression(const SQLExpression &sqle);
+	SQLExpression(const SQLTable &pt);
 	std::string toString() const;
 	SQLExpression &openParen(bool bNot);
 	SQLExpression &closeParen();
@@ -475,6 +480,10 @@ public:
 	static std::string buildFunctionString(SQLExpression::Function e, const SQLExpression &sqle, const SQLExpressionList &sqleList);
 	SQLExpression &genericFunction(SQLExpression::Function e, const SQLExpressionList &sqleList);
 	explicit operator bool() const;
+	SQLExpression &singleQuotes();
+	SQLExpression &doubleQuotes();
+	void sqlFunction(SQLExpression::Function e, const SQLExpressionList &sqleList);
+	void sqlFunction(SQLExpression::Function e);
 
 	/* Comparison Operators */
 	SQLExpression &equal(const SQLExpression &sqle);
@@ -557,11 +566,11 @@ public:
 	SQLExpression &CONCAT(const SQLExpressionList &sqleRight);
 	SQLExpression &CONCAT_WS(const SQLExpression &sqleSeparator, const SQLExpression &sqleRight);
 	SQLExpression &CONCAT_WS(const SQLExpression &sqleSeparator, const SQLExpressionList &sqleRight);
-	SQLExpression &ELT(const SQLExpression &sqleIndex, const SQLExpressionList &sqleList);
+	SQLExpression &ELT(const SQLExpressionList &sqleList);
 	SQLExpression &EXPORT_SET(const SQLExpression &sqleON, const SQLExpression &sqleOFF,
 		const SQLExpression &sqleSep = SQLExpression(), const SQLExpression &sqleBitNum = SQLExpression());
 	SQLExpression &FIELD(const SQLExpressionList &sqleList);
-	SQLExpression &FIND_IN_SET(const SQLExpression &sqleList);
+	SQLExpression &FIND_IN_SET(const SQLExpressionList &sqleList);
 	SQLExpression &FORMAT(const SQLExpression &sqlePrecision, const SQLExpression &sqleLocal = SQLExpression());
 	SQLExpression &FROM_BASE64();
 	SQLExpression &INSERT(const SQLExpression &sqlePos, const SQLExpression &sqleLen, const SQLExpression &sqleNewStr);
@@ -783,14 +792,41 @@ public:
 	SQLExpression &WAIT_FOR_EXECUTED_GTID_SET(const SQLExpression &sqleTimeout = SQLExpression());
 	SQLExpression &WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(const SQLExpression &sqleTimeout = SQLExpression(), const SQLExpression &sqleChannel = SQLExpression());
 
+	/* Spatial Analysis Functions */
+	SQLExpression &ST_GeomCollFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_GeometryCollectionFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_GeomCollFromTxt(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &GeomCollFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &GeometryCollectionFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	/* Miscellaneous Functions */
+	SQLExpression &ANY_VALUE();
+	SQLExpression &DEFAULT();
+	SQLExpression &GET_LOCK(const SQLExpression &sqleTimeout);
+	SQLExpression &INET_ATON();
+	SQLExpression &INET_NTOA();
+	SQLExpression &INET6_ATON();
+	SQLExpression &INET6_NTOA();
+	SQLExpression &IS_FREE_LOCK();
+	SQLExpression &IS_IPV4();
+	SQLExpression &IS_IPV4_COMPAT();
+	SQLExpression &IS_IPV4_MAPPED();
+	SQLExpression &IS_IPV6();
+	SQLExpression &IS_USED_LOCK();
+	SQLExpression &MASTER_POS_WAIT(const SQLExpression &sqlePos, const SQLExpression &sqleTimeout = SQLExpression(), const SQLExpression &sqleChannel = SQLExpression());
+	SQLExpression &NAME_CONST(const SQLExpression &sqleValue);
+	SQLExpression &RELEASE_ALL_LOCKS();
+	SQLExpression &RELEASE_LOCK();
+	SQLExpression &SLEEP();
+	SQLExpression &UUID();
+	SQLExpression &UUID_SHORT();
+	SQLExpression &VALUES(const SQLExpressionList &sqlel);
 
 
 
 public:
 	SQLExpression() {};
 protected:
-	std::string sExpr;
-	int iNestLevel = 0;
 };
 
 class SQLExpressionList : public std::list<SQLExpression>, public SQLExpression {
@@ -800,7 +836,8 @@ public:
 	//SQLExpressionList(const SQLExpression sqleArray[], int i);
 	SQLExpressionList(SQLExpression arg[], size_t size);
 	SQLExpressionList &updateString();
-	std::string getListString() const;
+	std::string getListString(bool bIncludeEmpty = false) const;
+	int removeEmptyExpressions();
 
 	SQLExpression &ELT(const SQLExpression &sqleIndex);
 	using SQLExpression::ELT;
@@ -814,20 +851,20 @@ protected:
 
 inline SQLExpression & SQLExpression::JSON_ARRAY(const SQLExpressionList & sqleList = SQLExpressionList())
 {
-	sExpr = buildFunctionString(eJSON_ARRAY, *this, sqleList);
+	sqlFunction(eJSON_ARRAY, sqleList);
 	return *this;
 }
 
 inline SQLExpression & SQLExpression::JSON_OBJECT(const SQLExpressionList & sqleList = SQLExpressionList())
 {
-	sExpr = buildFunctionString(eJSON_OBJECT, *this, sqleList);
+	sqlFunction(eJSON_OBJECT, sqleList);
 	return *this;
 }
 
 
 inline SQLExpression & SQLExpression::JSON_EXTRACT(const SQLExpressionList & sqleList = SQLExpressionList())
 {
-	sExpr = buildFunctionString(eJSON_EXTRACT, *this, sqleList);
+	sqlFunction(eJSON_EXTRACT, sqleList);
 	return *this;
 }
 #endif

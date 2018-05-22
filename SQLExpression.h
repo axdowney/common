@@ -24,11 +24,13 @@ public:
 		eANY_VALUE,
 		eArea,
 		eAsBinary,
+		eAsWKB,
 		eASCII,
 		eASIN,
 		eEqual,
 		eAssign,
 		eAsText,
+		eAsWKT,
 		eASYMMETRIC_DECRYPT,
 		eASYMMETRIC_DERIVE,
 		eASYMMETRIC_ENCRYPT,
@@ -133,11 +135,14 @@ public:
 		eGeomCollFromText,
 		eGeometryCollectionFromText,
 		eGeomCollFromWKB,
+		eGeometryCollectionFromWKB,
 		eGeometryCollection,
 		eGeometryN,
 		eGeometryType,
 		eGeomFromText,
+		eGeometryFromText,
 		eGeomFromWKB,
+		eGeometryFromWKB,
 		eGET_FORMAT,
 		eGET_LOCK,
 		eGLength,
@@ -215,7 +220,9 @@ public:
 		eLessThanEq,
 		eLIKE,
 		eLineFromText,
+		eLineStringFromText,
 		eLineFromWKB,
+		eLineStringFromWKB,
 		eLineString,
 		eLN,
 		eLOAD_FILE,
@@ -251,15 +258,21 @@ public:
 		eSubtract,
 		eMINUTE,
 		eMLineFromText,
+		eMultiLineStringFromText,
 		eMLineFromWKB,
+		eMultiLineStringFromWKB,
 		eMOD,
 
 		eMONTH,
 		eMONTHNAME,
 		eMPointFromText,
+		eMultiPointFromText,
 		eMPointFromWKB,
+		eMultiPointFromWKB,
 		eMPolyFromText,
+		eMultiPolygonFromText,
 		eMPolyFromWKB,
+		eMultiPolygonFromWKB,
 		eMultiLineString,
 		eMultiPoint,
 		eMultiPolygon,
@@ -293,7 +306,9 @@ public:
 		ePointFromWKB,
 		ePointN,
 		ePolyFromText,
+		ePolygonFromText,
 		ePolyFromWKB,
+		ePolygonFromWKB,
 		ePolygon,
 		ePOSITION,
 		ePOW,
@@ -333,8 +348,10 @@ public:
 		eSRID,
 		eST_Area,
 		eST_AsBinary,
+		eST_AsWKB,
 		eST_AsGeoJSON,
 		eST_AsText,
+		eST_AsWKT,
 		eST_Buffer,
 		eST_Buffer_Strategy,
 		eST_Centroid,
@@ -355,11 +372,15 @@ public:
 		eST_GeometryCollectionFromText,
 		eST_GeomCollFromTxt,
 		eST_GeomCollFromWKB,
+		eST_GeometryCollectionFromWKB,
 		eST_GeometryN,
 		eST_GeometryType,
 		eST_GeomFromGeoJSON,
 		eST_GeomFromText,
+		eST_GeometryFromText,
 		eST_GeomFromWKB,
+		eST_GeometryFromWKB,
+		eST_GLength,
 		eST_InteriorRingN,
 		eST_Intersection,
 		eST_Intersects,
@@ -370,15 +391,23 @@ public:
 		eST_LatFromGeoHash,
 		eST_Length,
 		eST_LineFromText,
+		eST_LineStringFromText,
 		eST_LineFromWKB,
+		eST_LineStringFromWKB,
 		eST_LongFromGeoHash,
 		eST_MakeEnvelope,
 		eST_MLineFromText,
+		eST_MultiLineStringFromText,
 		eST_MLineFromWKB,
+		eST_MultiLineStringFromWKB,
 		eST_MPointFromText,
+		eST_MultiPointFromText,
 		eST_MPointFromWKB,
+		eST_MultiPointFromWKB,
 		eST_MPolyFromText,
+		eST_MultiPolygonFromText,
 		eST_MPolyFromWKB,
+		eST_MultiPolygonFromWKB,
 		eST_NumGeometries,
 		eST_NumInteriorRing,
 		eST_NumPoints,
@@ -388,7 +417,9 @@ public:
 		eST_PointFromWKB,
 		eST_PointN,
 		eST_PolyFromText,
+		eST_PolygonFromText,
 		eST_PolyFromWKB,
+		eST_PolygonFromWKB,
 		eST_Simplify,
 		eST_SRID,
 		eST_StartPoint,
@@ -798,6 +829,230 @@ public:
 	SQLExpression &ST_GeomCollFromTxt(const SQLExpression &sqleSrid = SQLExpression());
 	SQLExpression &GeomCollFromText(const SQLExpression &sqleSrid = SQLExpression());
 	SQLExpression &GeometryCollectionFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_GeomFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_GeometryFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &GeomFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &GeometryFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_LineFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_LineStringFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &LineFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &LineStringFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_MLineFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_MultiLineStringFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MLineFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MultiLineStringFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_MPointFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_MultiPointFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MPointFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MultiPointFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_MPolyFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_MultiPolygonFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MPolyFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MultiPolygonFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_PointFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &PointFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_PolyFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_PolygonFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &PolyFromText(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &PolygonFromText(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_GeomCollFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_GeometryCollectionFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &GeomCollFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &GeometryCollectionFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_GeomFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_GeometryFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &GeomFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &GeometryFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_LineFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_LineStringFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &LineFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &LineStringFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_MLineFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_MultiLineStringFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MLineFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MultiLineStringFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_MPointFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_MultiPointFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MPointFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MultiPointFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_MPolyFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_MultiPolygonFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MPolyFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &MultiPolygonFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_PointFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &PointFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &ST_PolyFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &ST_PolygonFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &PolyFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+	SQLExpression &PolygonFromWKB(const SQLExpression &sqleSrid = SQLExpression());
+
+	SQLExpression &GeometryCollection(const SQLExpressionList &sqlelGeoms);
+	SQLExpression &LineString(const SQLExpressionList &sqlelPoints);
+	SQLExpression &MultiLineString(const SQLExpressionList &sqlelLines);
+	SQLExpression &MultiPoint(const SQLExpressionList &sqlelPoints);
+	SQLExpression &MultiPolygon(const SQLExpressionList &sqlelPolygons);
+	SQLExpression &Point(const SQLExpression &sqleY);
+	SQLExpression &Polygon(const SQLExpressionList &sqlelLines);
+
+	SQLExpression &ST_AsBinary();
+	SQLExpression &ST_AsWKB();
+	SQLExpression &AsBinary();
+	SQLExpression &AsWKB();
+
+	SQLExpression &ST_AsText();
+	SQLExpression &ST_AsWKT();
+	SQLExpression &AsText();
+	SQLExpression &AsWKT();
+
+	SQLExpression &Dimension();
+	SQLExpression &ST_Dimension();
+	
+	SQLExpression &Envelope();
+	SQLExpression &ST_Envelope();
+
+	SQLExpression &GeometryType();
+	SQLExpression &ST_GeometryType();
+
+	SQLExpression &IsEmpty();
+	SQLExpression &ST_IsEmpty();
+
+	SQLExpression &IsSimple();
+	SQLExpression &ST_IsSimple();
+
+	SQLExpression &SRID();
+	SQLExpression &ST_SRID();
+
+	SQLExpression &ST_Y();
+	SQLExpression &Y();
+
+	SQLExpression &ST_X();
+	SQLExpression &X();
+
+	SQLExpression &ST_StartPoint();
+	SQLExpression &StartPoint();
+
+	SQLExpression &ST_EndPoint();
+	SQLExpression &EndPoint();
+
+	SQLExpression &ST_Length();
+	SQLExpression &ST_GLength();
+	SQLExpression &GLength();
+
+	SQLExpression &ST_IsClosed();
+	SQLExpression &IsClosed();
+
+	SQLExpression &ST_NumPoints();
+	SQLExpression &NumPoints();
+
+	SQLExpression &ST_PointN(SQLExpression &sqleN);
+	SQLExpression &PointN(SQLExpression &sqleN);
+
+	SQLExpression &ST_Area();
+	SQLExpression &Area();
+
+	SQLExpression &ST_Centroid();
+	SQLExpression &Centroid();
+
+	SQLExpression &ST_ExteriorRing();
+	SQLExpression &ExteriorRing();
+
+	SQLExpression &ST_InteriorRingN(const SQLExpression &sqleN);
+	SQLExpression &InteriorRingN(const SQLExpression &sqleN);
+
+	SQLExpression &ST_NumInteriorRings();
+	SQLExpression &NumInteriorRings();
+
+	SQLExpression &ST_GeometryN(const SQLExpression &sqleN);
+	SQLExpression &GeometryN(const SQLExpression &sqleN);
+
+	SQLExpression &ST_NumGeometries();
+	SQLExpression &NumGeometries();
+	
+	SQLExpression &ST_Buffer(const SQLExpression &sqleD, const SQLExpressionList &sqlelStrategies);
+	SQLExpression &Buffer(const SQLExpression &sqleD, const SQLExpressionList &sqlelStrategies);
+
+	SQLExpression &ST_ConvexHull();
+	SQLExpression &ConvexHull();
+
+	SQLExpression &ST_Buffer_Strategy(const SQLExpression &sqlePoints = SQLExpression());
+	SQLExpression &ST_Difference(const SQLExpression &sqleG2);
+	SQLExpression &ST_Intersection(const SQLExpression &sqleG2);
+	SQLExpression &ST_SymDifference(const SQLExpression &sqleG2);
+	SQLExpression &ST_Union(const SQLExpression &sqleG2);
+
+	/* Spatial Relation Functions That Use Object Shapes */
+	SQLExpression &ST_Crosses(const SQLExpression &sqleG2);
+	SQLExpression &Crosses(const SQLExpression &sqleG2);
+
+	SQLExpression &ST_Distance(const SQLExpression &sqleG2);
+	SQLExpression &Distance(const SQLExpression &sqleG2);
+
+	SQLExpression &ST_Contains(const SQLExpression &sqleG2);
+	SQLExpression &Contains(const SQLExpression &sqleG2);
+
+	SQLExpression &ST_Disjoint(const SQLExpression &sqleG2);
+	SQLExpression &Disjoint(const SQLExpression &sqleG2);
+
+	SQLExpression &ST_Equals(const SQLExpression &sqleG2);
+	SQLExpression &Equals(const SQLExpression &sqleG2);
+
+	SQLExpression &ST_Intersects(const SQLExpression &sqleG2);
+	SQLExpression &Intersects(const SQLExpression &sqleG2);
+
+	SQLExpression &ST_Overlaps(const SQLExpression &sqleG2);
+	SQLExpression &Overlaps(const SQLExpression &sqleG2);
+
+	SQLExpression &ST_Within(const SQLExpression &sqleG2);
+	SQLExpression &Within(const SQLExpression &sqleG2);
+
+	SQLExpression &ST_Touches(const SQLExpression &sqleG2);
+	SQLExpression &Touches(const SQLExpression &sqleG2);
+
+	/* Spatial Relation Functions That Use Minimum Bounding Rectangles */
+	SQLExpression &MBRContains(const SQLExpression &sqleG2);
+	SQLExpression &MBRCoveredBy(const SQLExpression &sqleG2);
+	SQLExpression &MBRCovers(const SQLExpression &sqleG2);
+	SQLExpression &MBRDisjoint(const SQLExpression &sqleG2);
+	SQLExpression &MBREqual(const SQLExpression &sqleG2);
+	SQLExpression &MBREquals(const SQLExpression &sqleG2);
+	SQLExpression &MBRIntersects(const SQLExpression &sqleG2);
+	SQLExpression &MBROverlaps(const SQLExpression &sqleG2);
+	SQLExpression &MBRTouches(const SQLExpression &sqleG2);
+	SQLExpression &MBRWithin(const SQLExpression &sqleG2);
+
+	/* Spatial Geohash Functions */
+	SQLExpression &ST_GeoHash(const SQLExpressionList &sqlel);
+	SQLExpression &ST_LatFromGeoHash();
+	SQLExpression &ST_LongFromGeoHash();
+	SQLExpression &ST_PointFromGeoHash(const SQLExpression &sqle);
+
+	/* Spatial GeoJSON Functions */
+	SQLExpression &ST_AsGeoJSON(const SQLExpressionList &sqlel);
+	SQLExpression &ST_GeomFromGeoJSON(const SQLExpressionList &sqlel);
+
+	/* Spatial Convenience Functions */
+	SQLExpression &ST_Distance_Sphere(const SQLExpressionList &sqlel);
+	SQLExpression &ST_IsValid();
+	SQLExpression &ST_MakeEnvelope(const SQLExpression &sqle);
+	SQLExpression &ST_Simplify(const SQLExpression &sqleMaxDistance);
+	SQLExpression &ST_Validate();
+
+
 
 	/* Miscellaneous Functions */
 	SQLExpression &ANY_VALUE();

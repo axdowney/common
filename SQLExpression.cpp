@@ -97,6 +97,9 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eAsBinary:
 		sRet = "AsBinary";
 		break;
+	case SQLExpression::eAsWKB:
+		sRet = "AsWKB";
+		break;
 	case SQLExpression::eASCII:
 		sRet = "ASCII";
 		break;
@@ -111,6 +114,9 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 		break;
 	case SQLExpression::eAsText:
 		sRet = "AsText";
+		break;
+	case SQLExpression::eAsWKT:
+		sRet = "AsWKT";
 		break;
 	case SQLExpression::eASYMMETRIC_DECRYPT:
 		sRet = "ASYMMETRIC_DECRYPT";
@@ -420,6 +426,9 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eGeomCollFromWKB:
 		sRet = "GeomCollFromWKB";
 		break;
+	case SQLExpression::eGeometryCollectionFromWKB:
+		sRet = "GeometryCollectionFromWKB";
+		break;
 	case SQLExpression::eGeometryCollection:
 		sRet = "GeometryCollection";
 		break;
@@ -432,8 +441,14 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eGeomFromText:
 		sRet = "GeomFromText";
 		break;
+	case SQLExpression::eGeometryFromText:
+		sRet = "GeometryFromText";
+		break;
 	case SQLExpression::eGeomFromWKB:
 		sRet = "GeomFromWKB";
+		break;
+	case SQLExpression::eGeometryFromWKB:
+		sRet = "GeometryFromWKB";
 		break;
 	case SQLExpression::eGET_FORMAT:
 		sRet = "GET_FORMAT";
@@ -666,8 +681,14 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eLineFromText:
 		sRet = "LineFromText";
 		break;
+	case SQLExpression::eLineStringFromText:
+		sRet = "LineStringFromText";
+		break;
 	case SQLExpression::eLineFromWKB:
 		sRet = "LineFromWKB";
+		break;
+	case SQLExpression::eLineStringFromWKB:
+		sRet = "LineStringFromWKB";
 		break;
 	case SQLExpression::eLineString:
 		sRet = "LineString";
@@ -774,8 +795,14 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eMLineFromText:
 		sRet = "MLineFromText";
 		break;
+	case SQLExpression::eMultiLineStringFromText:
+		sRet = "MultiLineStringFromText";
+		break;
 	case SQLExpression::eMLineFromWKB:
 		sRet = "MLineFromWKB";
+		break;
+	case SQLExpression::eMultiLineStringFromWKB:
+		sRet = "MultiLineStringFromWKB";
 		break;
 	case SQLExpression::eMOD:
 		sRet = "MOD";
@@ -790,14 +817,26 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eMPointFromText:
 		sRet = "MPointFromText";
 		break;
+	case SQLExpression::eMultiPointFromText:
+		sRet = "MultiPointFromText";
+		break;
 	case SQLExpression::eMPointFromWKB:
 		sRet = "MPointFromWKB";
+		break;
+	case SQLExpression::eMultiPointFromWKB:
+		sRet = "MultiPointFromWKB";
 		break;
 	case SQLExpression::eMPolyFromText:
 		sRet = "MPolyFromText";
 		break;
+	case SQLExpression::eMultiPolygonFromText:
+		sRet = "MultiPolygonFromText";
+		break;
 	case SQLExpression::eMPolyFromWKB:
 		sRet = "MPolyFromWKB";
+		break;
+	case SQLExpression::eMultiPolygonFromWKB:
+		sRet = "MultiPolygonFromWKB";
 		break;
 	case SQLExpression::eMultiLineString:
 		sRet = "MultiLineString";
@@ -892,8 +931,14 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::ePolyFromText:
 		sRet = "PolyFromText";
 		break;
+	case SQLExpression::ePolygonFromText:
+		sRet = "PolygonFromText";
+		break;
 	case SQLExpression::ePolyFromWKB:
 		sRet = "PolyFromWKB";
+		break;
+	case SQLExpression::ePolygonFromWKB:
+		sRet = "PolygonFromWKB";
 		break;
 	case SQLExpression::ePolygon:
 		sRet = "Polygon";
@@ -1012,11 +1057,17 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eST_AsBinary:
 		sRet = "ST_AsBinary";
 		break;
+	case SQLExpression::eST_AsWKB:
+		sRet = "ST_AsWKB";
+		break;
 	case SQLExpression::eST_AsGeoJSON:
 		sRet = "ST_AsGeoJSON";
 		break;
 	case SQLExpression::eST_AsText:
 		sRet = "ST_AsText";
+		break;
+	case SQLExpression::eST_AsWKT:
+		sRet = "ST_AsWKT";
 		break;
 	case SQLExpression::eST_Buffer:
 		sRet = "ST_Buffer";
@@ -1078,6 +1129,9 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eST_GeomCollFromWKB:
 		sRet = "ST_GeomCollFromWKB";
 		break;
+	case SQLExpression::eST_GeometryCollectionFromWKB:
+		sRet = "ST_GeometryCollectionFromWKB";
+		break;
 	case SQLExpression::eST_GeometryN:
 		sRet = "ST_GeometryN";
 		break;
@@ -1090,8 +1144,17 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eST_GeomFromText:
 		sRet = "ST_GeomFromText";
 		break;
+	case SQLExpression::eST_GeometryFromText:
+		sRet = "ST_GeometryFromText";
+		break;
 	case SQLExpression::eST_GeomFromWKB:
 		sRet = "ST_GeomFromWKB";
+		break;
+	case SQLExpression::eST_GeometryFromWKB:
+		sRet = "ST_GeometryFromWKB";
+		break;
+	case SQLExpression::eST_GLength:
+		sRet = "ST_GLength";
 		break;
 	case SQLExpression::eST_InteriorRingN:
 		sRet = "ST_InteriorRingN";
@@ -1123,8 +1186,14 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eST_LineFromText:
 		sRet = "ST_LineFromText";
 		break;
+	case SQLExpression::eST_LineStringFromText:
+		sRet = "ST_LineStringFromText";
+		break;
 	case SQLExpression::eST_LineFromWKB:
 		sRet = "ST_LineFromWKB";
+		break;
+	case SQLExpression::eST_LineStringFromWKB:
+		sRet = "ST_LineStringFromWKB";
 		break;
 	case SQLExpression::eST_LongFromGeoHash:
 		sRet = "ST_LongFromGeoHash";
@@ -1135,11 +1204,20 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eST_MLineFromText:
 		sRet = "ST_MLineFromText";
 		break;
+	case SQLExpression::eST_MultiLineStringFromText:
+		sRet = "ST_MultiLineStringFromText";
+		break;
 	case SQLExpression::eST_MLineFromWKB:
 		sRet = "ST_MLineFromWKB";
 		break;
+	case SQLExpression::eST_MultiLineStringFromWKB:
+		sRet = "ST_MultiLineStringFromWKB";
+		break;
 	case SQLExpression::eST_MPointFromText:
 		sRet = "ST_MPointFromText";
+		break;
+	case SQLExpression::eST_MultiPointFromWKB:
+		sRet = "ST_MultiPointFromWKB";
 		break;
 	case SQLExpression::eST_MPointFromWKB:
 		sRet = "ST_MPointFromWKB";
@@ -1147,8 +1225,14 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eST_MPolyFromText:
 		sRet = "ST_MPolyFromText";
 		break;
+	case SQLExpression::eST_MultiPolygonFromText:
+		sRet = "ST_MulitPolygonFromText";
+		break;
 	case SQLExpression::eST_MPolyFromWKB:
 		sRet = "ST_MPolyFromWKB";
+		break;
+	case SQLExpression::eST_MultiPolygonFromWKB:
+		sRet = "ST_MultiPolygonFromWKB";
 		break;
 	case SQLExpression::eST_NumGeometries:
 		sRet = "ST_NumGeometries";
@@ -1177,8 +1261,14 @@ std::string SQLExpression::getFunction(SQLExpression::Function e)
 	case SQLExpression::eST_PolyFromText:
 		sRet = "ST_PolyFromText";
 		break;
+	case SQLExpression::eST_PolygonFromText:
+		sRet = "ST_PolygonFromText";
+		break;
 	case SQLExpression::eST_PolyFromWKB:
 		sRet = "ST_PolyFromWKB";
+		break;
+	case SQLExpression::eST_PolygonFromWKB:
+		sRet = "ST_PolygonFromWKB";
 		break;
 	case SQLExpression::eST_Simplify:
 		sRet = "ST_Simplify";
@@ -3306,61 +3396,1003 @@ SQLExpression & SQLExpression::WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(const SQLExpres
 
 SQLExpression & SQLExpression::ST_GeomCollFromText(const SQLExpression & sqleSrid)
 {
-	if (sqleSrid) {
-		sqlFunction(eST_GeomCollFromText, { sqleSrid });
-	}
-	else {
-		sqlFunction(eST_GeomCollFromText, { });
-	}
-
+	sqlFunction(eST_GeomCollFromText, { sqleSrid });
 	return *this;
 }
 
 SQLExpression & SQLExpression::ST_GeometryCollectionFromText(const SQLExpression & sqleSrid)
 {
-	if (sqleSrid) {
-		sqlFunction(eST_GeometryCollectionFromText, { sqleSrid });
-	}
-	else {
-		sqlFunction(eST_GeometryCollectionFromText, { });
-	}
-
+	sqlFunction(eST_GeometryCollectionFromText, { sqleSrid });
 	return *this;
 }
 
 SQLExpression & SQLExpression::ST_GeomCollFromTxt(const SQLExpression & sqleSrid)
 {
-	if (sqleSrid) {
-		sqlFunction(eST_GeomCollFromTxt, { sqleSrid });
-	}
-	else {
-		sqlFunction(eST_GeomCollFromTxt, { });
-	}
-
+	sqlFunction(eST_GeomCollFromTxt, { sqleSrid });
 	return *this;
 }
 
 SQLExpression & SQLExpression::GeomCollFromText(const SQLExpression & sqleSrid)
 {
-	if (sqleSrid) {
-		sqlFunction(eGeomCollFromText, { sqleSrid });
-	}
-	else {
-		sqlFunction(eGeomCollFromText, { });
-	}
-
+	sqlFunction(eGeomCollFromText, { sqleSrid });
 	return *this;
 }
 
 SQLExpression & SQLExpression::GeometryCollectionFromText(const SQLExpression & sqleSrid)
 {
-	if (sqleSrid) {
-		sqlFunction(eGeometryCollectionFromText, { sqleSrid });
-	}
-	else {
-		sqlFunction(eGeometryCollectionFromText, { });
-	}
+	sqlFunction(eGeometryCollectionFromText, { sqleSrid });
+	return *this;
+}
 
+SQLExpression & SQLExpression::ST_GeomFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_GeomFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeometryFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_GeometryFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeomFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eGeomFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeometryFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eGeometryFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_LineFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_LineFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_LineStringFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_LineStringFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::LineFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eLineFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::LineStringFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eLineStringFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MLineFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MLineFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MultiLineStringFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MultiLineStringFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MLineFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMLineFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiLineStringFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMultiLineStringFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MPointFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MPointFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MultiPointFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MultiPointFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MPointFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMPointFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiPointFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMultiPointFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MPolyFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MPolyFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MultiPolygonFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MultiPolygonFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MPolyFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMPolyFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiPolygonFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMultiPolygonFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_PointFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_PointFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::PointFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(ePointFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_PolyFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_PolyFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_PolygonFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_PolygonFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::PolyFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(ePolyFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::PolygonFromText(const SQLExpression & sqleSrid)
+{
+	sqlFunction(ePolygonFromText, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeomCollFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_GeomCollFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeometryCollectionFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_GeometryCollectionFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeomCollFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eGeomCollFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeometryCollectionFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eGeometryCollectionFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeomFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_GeomFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeometryFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_GeometryFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeomFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eGeomFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeometryFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eGeometryFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_LineFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_LineFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_LineStringFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_LineStringFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::LineFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eLineFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::LineStringFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eLineStringFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MLineFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MLineFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MultiLineStringFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MultiLineStringFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MLineFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMLineFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiLineStringFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMultiLineStringFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MPointFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MPointFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MultiPointFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MultiPointFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MPointFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMPointFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiPointFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMultiPointFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MPolyFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MPolyFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MultiPolygonFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_MultiPolygonFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MPolyFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMPolyFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiPolygonFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eMultiPolygonFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_PointFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_PointFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::PointFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(ePointFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_PolyFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_PolyFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_PolygonFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(eST_PolygonFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::PolyFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(ePolyFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::PolygonFromWKB(const SQLExpression & sqleSrid)
+{
+	sqlFunction(ePolygonFromWKB, { sqleSrid });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeometryCollection(const SQLExpressionList & sqlelGeoms)
+{
+	sqlFunction(eGeometryCollection, sqlelGeoms);
+	return *this;
+}
+
+SQLExpression & SQLExpression::LineString(const SQLExpressionList & sqlelPoints)
+{
+	sqlFunction(eLineString, sqlelPoints);
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiLineString(const SQLExpressionList & sqlelLines)
+{
+	sqlFunction(eMultiLineString, sqlelLines);
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiPoint(const SQLExpressionList & sqlelPoints)
+{
+	sqlFunction(eMultiPoint, sqlelPoints);
+	return *this;
+}
+
+SQLExpression & SQLExpression::MultiPolygon(const SQLExpressionList & sqlelPolygons)
+{
+	sqlFunction(eMultiPolygon, sqlelPolygons);
+	return *this;
+}
+
+SQLExpression & SQLExpression::Point(const SQLExpression & sqleY)
+{
+	sqlFunction(ePoint, { sqleY });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Polygon(const SQLExpressionList & sqlelLines)
+{
+	sqlFunction(ePolygon, sqlelLines);
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_AsBinary()
+{
+	sqlFunction(eST_AsBinary, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_AsWKB()
+{
+	sqlFunction(eST_AsWKB, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::AsBinary()
+{
+	sqlFunction(eAsBinary, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::AsWKB()
+{
+	sqlFunction(eAsWKB, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_AsText()
+{
+	sqlFunction(eST_AsText, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_AsWKT()
+{
+	sqlFunction(eST_AsWKT, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::AsText()
+{
+	sqlFunction(eAsText, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::AsWKT()
+{
+	sqlFunction(eAsWKT, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::Dimension()
+{
+	sqlFunction(eDimension, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Dimension()
+{
+	sqlFunction(eST_Dimension, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::Envelope()
+{
+	sqlFunction(eEnvelope, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Envelope()
+{
+	sqlFunction(eST_Envelope, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeometryType()
+{
+	sqlFunction(eGeometryType, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeometryType()
+{
+	sqlFunction(eST_GeometryType, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::IsEmpty()
+{
+	sqlFunction(eIsEmpty, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_IsEmpty()
+{
+	sqlFunction(eST_IsEmpty, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::IsSimple()
+{
+	sqlFunction(eIsSimple, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_IsSimple()
+{
+	sqlFunction(eST_IsSimple, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::SRID()
+{
+	sqlFunction(eSRID, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_SRID()
+{
+	sqlFunction(eST_SRID, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Y()
+{
+	sqlFunction(eST_Y, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::Y()
+{
+	sqlFunction(eY, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_X()
+{
+	sqlFunction(eST_X, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::X()
+{
+	sqlFunction(eX, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_StartPoint()
+{
+	sqlFunction(eST_StartPoint, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::StartPoint()
+{
+	sqlFunction(eStartPoint, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_EndPoint()
+{
+	sqlFunction(eST_EndPoint, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::EndPoint()
+{
+	sqlFunction(eEndPoint, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Length()
+{
+	sqlFunction(eST_Length, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GLength()
+{
+	sqlFunction(eST_GLength, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::GLength()
+{
+	sqlFunction(eGLength, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_IsClosed()
+{
+	sqlFunction(eST_IsClosed, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::IsClosed()
+{
+	sqlFunction(eIsClosed, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_NumPoints()
+{
+	sqlFunction(eST_NumPoints, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::NumPoints()
+{
+	sqlFunction(eNumPoints, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_PointN(SQLExpression & sqleN)
+{
+	sqlFunction(eST_PointN, { sqleN });
+	return *this;
+}
+
+SQLExpression & SQLExpression::PointN(SQLExpression & sqleN)
+{
+	sqlFunction(ePointN, { sqleN });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Area()
+{
+	sqlFunction(eST_Area, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::Area()
+{
+	sqlFunction(eArea, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Centroid()
+{
+	sqlFunction(eST_Centroid, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::Centroid()
+{
+	sqlFunction(eCentroid, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_ExteriorRing()
+{
+	sqlFunction(eST_ExteriorRing, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ExteriorRing()
+{
+	sqlFunction(eExteriorRing, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_InteriorRingN(const SQLExpression & sqleN)
+{
+	sqlFunction(eST_InteriorRingN, { sqleN });
+	return *this;
+}
+
+SQLExpression & SQLExpression::InteriorRingN(const SQLExpression & sqleN)
+{
+	sqlFunction(eInteriorRingN, { sqleN });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_NumInteriorRings()
+{
+	sqlFunction(eNumInteriorRings, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::NumInteriorRings()
+{
+	sqlFunction(eNumInteriorRings, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeometryN(const SQLExpression & sqleN)
+{
+	sqlFunction(eST_GeometryN, { sqleN });
+	return *this;
+}
+
+SQLExpression & SQLExpression::GeometryN(const SQLExpression & sqleN)
+{
+	sqlFunction(eGeometryN, { sqleN });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_NumGeometries()
+{
+	sqlFunction(eST_NumGeometries, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::NumGeometries()
+{
+	sqlFunction(eNumGeometries, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Buffer(const SQLExpression & sqleD, const SQLExpressionList & sqlelStrategies)
+{
+	sqlFunction(eST_Buffer, {sqleD, sqlelStrategies});
+	return *this;
+}
+
+SQLExpression & SQLExpression::Buffer(const SQLExpression & sqleD, const SQLExpressionList & sqlelStrategies)
+{
+	sqlFunction(eBuffer, {sqleD, sqlelStrategies});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_ConvexHull()
+{
+	sqlFunction(eST_ConvexHull, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ConvexHull()
+{
+	sqlFunction(eConvexHull, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Buffer_Strategy(const SQLExpression & sqlePoints)
+{
+	sqlFunction(eST_Buffer_Strategy, { sqlePoints });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Difference(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Difference, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Intersection(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Intersection, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_SymDifference(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_SymDifference, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Union(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Union, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Crosses(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Crosses, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Crosses(const SQLExpression & sqleG2)
+{
+	sqlFunction(eCrosses, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Distance(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Distance, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Distance(const SQLExpression & sqleG2)
+{
+	sqlFunction(eDistance, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Contains(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Contains, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Contains(const SQLExpression & sqleG2)
+{
+	sqlFunction(eContains, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Disjoint(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Disjoint, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Disjoint(const SQLExpression & sqleG2)
+{
+	sqlFunction(eDisjoint, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Equals(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Equals, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Equals(const SQLExpression & sqleG2)
+{
+	sqlFunction(eEquals, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Intersects(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Intersects, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Intersects(const SQLExpression & sqleG2)
+{
+	sqlFunction(eIntersects, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Overlaps(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Overlaps, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Overlaps(const SQLExpression & sqleG2)
+{
+	sqlFunction(eOverlaps, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Within(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Within, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Within(const SQLExpression & sqleG2)
+{
+	sqlFunction(eWithin, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Touches(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Touches, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::Touches(const SQLExpression & sqleG2)
+{
+	sqlFunction(eST_Touches, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBRContains(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBRContains, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBRCoveredBy(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBRCoveredBy, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBRCovers(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBRCovers, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBRDisjoint(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBRDisjoint, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBREqual(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBREqual, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBREquals(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBREquals, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBRIntersects(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBRIntersects, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBROverlaps(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBROverlaps, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBRTouches(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBRTouches, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::MBRWithin(const SQLExpression & sqleG2)
+{
+	sqlFunction(eMBRWithin, { sqleG2 });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeoHash(const SQLExpressionList & sqlel)
+{
+	sqlFunction(eST_GeoHash, sqlel );
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_LatFromGeoHash()
+{
+	sqlFunction(eST_LatFromGeoHash, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_LongFromGeoHash()
+{
+	sqlFunction(eST_LongFromGeoHash, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_PointFromGeoHash(const SQLExpression & sqle)
+{
+	sqlFunction(eST_PointFromGeoHash, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_AsGeoJSON(const SQLExpressionList & sqlel)
+{
+	sqlFunction(eST_AsGeoJSON, sqlel);
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_GeomFromGeoJSON(const SQLExpressionList & sqlel)
+{
+	sqlFunction(eST_GeomFromGeoJSON, sqlel);
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Distance_Sphere(const SQLExpressionList & sqlel)
+{
+	sqlFunction(eST_Distance_Sphere, sqlel);
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_IsValid()
+{
+	sqlFunction(eST_IsValid, {});
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_MakeEnvelope(const SQLExpression & sqle)
+{
+	sqlFunction(eST_MakeEnvelope, { sqle });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Simplify(const SQLExpression & sqleMaxDistance)
+{
+	sqlFunction(eST_Simplify, { sqleMaxDistance });
+	return *this;
+}
+
+SQLExpression & SQLExpression::ST_Validate()
+{
+	sqlFunction(eST_Validate, {});
 	return *this;
 }
 

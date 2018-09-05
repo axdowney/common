@@ -21,8 +21,9 @@ class StringUtils {
 		static bool isTrue(std::string str);
 		static bool isFalse(std::string str);
 		static void readConfig(std::string sConfigFile, std::map<std::string, std::string> &mapOptions, const std::string &sDelim, bool bTrim = true);
-		static std::string repeatString(const std::string &sCopy, size_t n);
+		static std::string repeatString(const std::string &sCopy, size_t n, const std::string &sDelimc= "");
 		static std::string toalnum(const std::string &str, int iCase);
+		static int sprintf(std::string &sOut, char* format, ...);
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 		static const char slash = '\\';

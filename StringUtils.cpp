@@ -6,6 +6,8 @@
 
 #include <string>
 #include <fstream>
+#include <cstdarg>
+#include <cstdio>
 using namespace std;
 
 void StringUtils::splitFirst(const std::string str, const std::string & delim, std::string & sFirst, std::string & sLast, bool bFirst)
@@ -167,11 +169,14 @@ void StringUtils::readConfig(std::string sConfigFile, std::map<std::string, std:
 	}
 }
 
-std::string StringUtils::repeatString(const std::string & sCopy, size_t n)
+std::string StringUtils::repeatString(const std::string & sCopy, size_t n, const std::string & sDelim)
 {
 	std::string sRet;
-	for (size_t t = 0; t < n; ++t) {
-		sRet += sCopy;
+	if (n > 0) {
+		sRet = sCopy;
+		for (size_t t = 1; t < n; ++t) {
+			sRet += sDelim + sCopy;
+		}
 	}
 	return sRet;
 }
@@ -193,4 +198,21 @@ std::string StringUtils::toalnum(const std::string &str, int iCase)
 		}
 	}
 	return sRet;
+}
+
+int StringUtils::sprintf(std::string & sOut, char * format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	int result = vsnprintf(NULL, 0, format, args);
+	va_end(args);
+	va_start(args, format);
+	char *cz = new char[result + 1]();
+	if ((result = vsnprintf(cz, result + 1, format, args)) > 0) {
+		sOut += cz;
+	}
+	va_end(args);
+	delete[] cz;
+	
+	return result;
 }

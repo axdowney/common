@@ -14,8 +14,9 @@ class FloatUtils {
         static bool essentiallyEqual(long double a, long double b, long double epsilon);
         static bool precisionCompare(long double left, long double right, unsigned int precision);
         static bool diffEqual(long double left, long double right, long double diff);
-		static bool sigdigEqual(long double left, long double right, size_t sigdigits);
+		static bool sigdigEqual(long double left, long double right, size_t sigdigits, bool bRound = false);
 		static bool frexEqual(long double left, long double right, size_t sigdigits);
+		static int edgeCases(long double left, long double right, bool bInfMatch = true, bool bNaNMatch = false);
 
 		static std::vector<double> generateSteps(double dBegin, double dEnd, size_t tNum);
 		static std::vector<double> generateStepsLogx(double dBegin, double dEnd, size_t tNum, size_t base);
@@ -33,7 +34,14 @@ class FloatUtils {
         template<typename typeX, typename typeY>
         static std::vector<typeY> interp1(const std::map<typeX, typeY> &mapXY, const std::vector<typeX> vecXQ);
 
+		template<typename typeX, typename typeY>
+		static typeY interp1Improve(const std::map<typeX, typeY> &mapXY, typeX dXQ);
+
 		std::string fpclassifyString(int fpclass);
+
+		static long double truncDiff(long double a, long double b);
+		static long double diffZeroRel(long double a, long double b, long double eps);
+		static long double diffZeroAbs(long double a, long double b, long double eps);
 
 		template<template<class, class> class C, class T>
 		static T getMode(const C<T, std::allocator<T> > &container) {
@@ -49,6 +57,7 @@ class FloatUtils {
 			if (iter != mapCount.end()) {
 				tRet = iter->first;
 			}
+			return tRet;
 		}
 
 		template<class Iterator, class T>
@@ -205,6 +214,8 @@ class FloatUtils {
 		static double summation(long long int i0, long long int in);
 		static double product(long long int i0, long long int in);
 		static double factorial(long long int n);
+		template <typename T>
+		T absub(T a, T b);
 };
 
 
@@ -217,14 +228,20 @@ typeY FloatUtils::interp1(typeX X0, typeX X1, typeY Y0, typeY Y1, typeX XQ) {
         /* Extrapolate */
         yRet = Y0 * ((typeX) 1 - (XQ - X0)/(X1 - X0)) + Y1 * ((typeX) 1 - (X1 - XQ)/(X1 - X0));
     } else {
-        yRet = (Y0*(X1 - XQ) + Y1*(XQ - X0))/(X1 - X0);
+        //yRet = (Y0*(X1 - XQ) + Y1*(XQ - X0))/(X1 - X0);
+		if ((X1 - XQ) < (XQ - X0)) {
+			yRet = Y1 - (X1 - XQ) * (Y1 - Y0) / (X1 - X0);
+		}
+		else {
+			yRet = Y0 + (XQ - X0) * (Y1 - Y0) / (X1 - X0);
+		}
     }
 
     return yRet;
 }
 
 template<typename typeX, typename typeY>
-typeY FloatUtils::interp1(const std::map<typeX, typeY> &mapXY, typeX dXQ) {
+typeY FloatUtils::interp1Improve(const std::map<typeX, typeY> &mapXY, typeX dXQ) {
     typeY dRet = 0;
     if (mapXY.size() > 1 ) {
         auto mapIter = mapXY.find(dXQ);
@@ -273,4 +290,55 @@ std::vector<typeY> FloatUtils::interp1(const std::map<typeX, typeY> &mapXY, cons
 
     return vecRet;
 }
+
+
+template<typename typeX, typename typeY>
+typeY FloatUtils::interp1(const std::map<typeX, typeY> &mapXY, typeX dXQ) {
+	typeY dRet = 0;
+	if (mapXY.size() > 1) {
+		auto upper = mapXY.upper_bound(dXQ);
+		auto lower = upper;
+		typeX dX0, dX1;
+		typeY dY0, dY1;
+		if (upper == mapXY.end()) {
+			--upper;
+			dX1 = upper->first;
+			dY1 = upper->second;
+			--upper;
+			dX0 = upper->first;
+			dY0 = upper->second;
+		}
+		else if (upper == mapXY.begin()) {
+			dX0 = upper->first;
+			dY0 = upper->second;
+			++upper;
+			dX1 = upper->first;
+			dY1 = upper->second;
+		}
+		else {
+			--lower;
+			if (lower->first == dXQ) {
+				return lower->second;
+			}
+			else {
+				dX0 = lower->first;
+				dY0 = lower->second;
+				dX1 = upper->first;
+				dY1 = upper->second;
+			}
+		}
+
+		dRet = FloatUtils::interp1(dX0, dX1, dY0, dY1, dXQ);
+	}
+
+	return dRet;
+}
+
+
+
+template <typename T>
+T FloatUtils::absub(T a, T b) {
+	return std::max(a, b) - std::min(a, b);
+}
+
 #endif

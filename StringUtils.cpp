@@ -8,6 +8,9 @@
 #include <fstream>
 #include <cstdarg>
 #include <cstdio>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 using namespace std;
 
 void StringUtils::splitFirst(const std::string str, const std::string & delim, std::string & sFirst, std::string & sLast, bool bFirst)
@@ -45,7 +48,7 @@ void StringUtils::splitLast(const std::string str, const std::string & delim, st
 }
 
 //Copied from https://stackoverflow.com/questions/289347/using-strtok-with-a-stdstring
-void StringUtils::split(const string& str, const string& delim, vector<string>& parts, bool bExact, bool bIncludeEmpty) {
+void StringUtils::split(const string& str, const string& delim, vector<string>& parts, bool bExact, bool bIncludeEmpty, std::vector<std::string> *delims) {
     if (delim.empty()) {
         if (!str.empty() || bIncludeEmpty) {
             parts.push_back(str);
@@ -59,6 +62,9 @@ void StringUtils::split(const string& str, const string& delim, vector<string>& 
             while (start < str.size() && (delim.find(str[start]) != string::npos)) {
                 start++;  // skip initial whitespace
             }
+			if (delims) {
+				delims->push_back(std::string(str, end, start - end));
+			}
             end = start;
             while (end < str.size() && (delim.find(str[end]) == string::npos)) {
                 end++; // skip to end of word
@@ -119,14 +125,14 @@ std::string StringUtils::under_scoreToCamelCase(const std::string &str) {
 	return sRet;
 }
 
-std::string StringUtils::trim(const std::string & str)
+std::string StringUtils::trim(const std::string & str, bool bExtend)
 {
 	int iFirst = 0;
 	int iEnd = str.size() - 1;
-	while (iFirst <= iEnd && isspace(str[iFirst])) {
+	while (iFirst <= iEnd && (isspace((unsigned char)str[iFirst]) || bExtend && str[iFirst] < 0)) {
 		++iFirst;
 	}
-	while (iEnd >= iFirst && isspace(str[iEnd])) {
+	while (iEnd >= iFirst && (isspace((unsigned char)str[iEnd]) || bExtend && str[iEnd] < 0)) {
 		--iEnd;
 	}
 	return iFirst <= iEnd ? str.substr(iFirst, iEnd - iFirst + 1) : std::string();
@@ -148,7 +154,7 @@ bool StringUtils::isFalse(std::string str)
 	return str == "FALSE";
 }
 
-void StringUtils::readConfig(std::string sConfigFile, std::map<std::string, std::string> &mapOptions, const std::string &sDelim, bool bTrim) {
+bool StringUtils::readConfig(std::string sConfigFile, std::map<std::string, std::string> &mapOptions, const std::string &sDelim, bool bTrim, bool bExtend) {
 	std::ifstream fin;
 	fin.open(sConfigFile.c_str());
 	bool bOK = fin.good();
@@ -160,13 +166,18 @@ void StringUtils::readConfig(std::string sConfigFile, std::map<std::string, std:
 			std::string sValue;
 			StringUtils::splitFirst(sLine, sDelim, sKey, sValue, true);
 			if (bTrim) {
-				sKey = trim(sKey);
-				sValue = trim(sValue);
+				std::cerr << "Before trim \"" << sKey; 
+				sKey = trim(sKey, bExtend);
+				std::cerr << "\" after trim \"" << sKey << "\"\n";
+				std::cerr << "Before trim \"" << sValue;
+				sValue = trim(sValue, bExtend);
+				std::cerr << "\" after trim \"" << sValue << "\"\n";
 			}
 			mapOptions[sKey] = sValue;
 			std::getline(fin, sLine);
 		}
 	}
+	return bOK;
 }
 
 std::string StringUtils::repeatString(const std::string & sCopy, size_t n, const std::string & sDelim)
@@ -181,16 +192,26 @@ std::string StringUtils::repeatString(const std::string & sCopy, size_t n, const
 	return sRet;
 }
 
-std::string StringUtils::toalnum(const std::string &str, int iCase)
+std::string StringUtils::toalnum(const std::string &str, int iCase, bool bSign, bool bFloat)
 {
+	int(*cond)(int) = isalnum;
+	if (bSign && bFloat) {
+		cond = isalfloatsign;
+	}
+	else if (bSign) {
+		cond = isalnumsign;
+	}
+	else if (bFloat) {
+		cond = isalfloat;
+	}
 	std::string sRet;
 	for (const char &c : str) {
-		if (isalnum(c)) {
+		if (cond((unsigned char)c)) {
 			if (iCase > 0) {
-				sRet += toupper(c);
+				sRet += toupper((unsigned char)c);
 			}
 			else if (iCase < 0) {
-				sRet += tolower(c);
+				sRet += tolower((unsigned char)c);
 			}
 			else {
 				sRet += c;
@@ -200,7 +221,7 @@ std::string StringUtils::toalnum(const std::string &str, int iCase)
 	return sRet;
 }
 
-int StringUtils::sprintf(std::string & sOut, char * format, ...)
+int StringUtils::sprintf(std::string & sOut, const char * format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -215,4 +236,39 @@ int StringUtils::sprintf(std::string & sOut, char * format, ...)
 	delete[] cz;
 	
 	return result;
+}
+
+std::string StringUtils::filterInclude(const std::string & str, const std::set<char> &sInclude)
+{
+	std::string sRet;
+	if (!sInclude.empty()) {
+		for (size_t i = 0; i < str.size(); ++i) {
+			if (sInclude.find(str[i]) != sInclude.end()) {
+				sRet += str[i];
+			}
+		}
+	}
+	return sRet;
+}
+
+std::string StringUtils::to_string(double d, int iPrecision)
+{
+	std::stringstream ss;
+	ss << std::fixed << setprecision(iPrecision) << d;
+	return ss.str();
+}
+
+int StringUtils::isalnumsign(int c)
+{
+	return isalnum(c) || c == '-' || c == '+';
+}
+
+int StringUtils::isalfloat(int c)
+{
+	return isalnum(c) || c == '.';
+}
+
+int StringUtils::isalfloatsign(int c)
+{
+	return isalnum(c) || c == '.' || c == '-' || c == '+';
 }

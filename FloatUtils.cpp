@@ -6,12 +6,15 @@
 
 bool FloatUtils::approximatelyEqual(long double a, long double b, long double epsilon)
 {
-    return fpclassify(a) == fpclassify(b) && fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+	int aclass = fpclassify(a);
+	int bclass = fpclassify(b);
+	bool bOK = aclass == bclass;
+    return fpclassify(a) == fpclassify(b) && (fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon));
 }
 
 bool FloatUtils::essentiallyEqual(long double a, long double b, long double epsilon)
 {
-    return fpclassify(a) == fpclassify(b) && fabs(a - b) <= ( (fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+    return std::isfinite(a) && std::isfinite(b) && (fabs(a - b) <= ( (fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon));
 }
 
 bool FloatUtils::precisionCompare(long double left, long double right, unsigned int precision) {
@@ -22,14 +25,27 @@ bool FloatUtils::diffEqual(long double left, long double right, long double diff
     return fabs(left - right) <= fabs(diff);
 }
 
-bool FloatUtils::sigdigEqual(long double left, long double right, size_t sigdigits)
+bool FloatUtils::sigdigEqual(long double left, long double right, size_t sigdigits, bool bRound)
 {
-	int iExpLeft = log10(left);
-	int iExpRight = log10(right);
-	bool bOK = iExpLeft == iExpRight && sigdigits > 0;
-	if (bOK) {
-		long int iLeft = left * pow(10, (int)sigdigits - iExpLeft - 1);
-		long int iRight = right * pow(10, (int)sigdigits - iExpRight - 1);
+	int iMatch = edgeCases(left, right,true,true);
+	bool bOK = iMatch >= 0;
+	if (iMatch == 0) {
+		int iExpLeft = 0;
+		int iExpRight = 0;
+		int64_t iLeft = 0;
+		int64_t iRight = 0;
+		double dRound = bRound ? 0.5 : 0.0;
+		if (left != 0) {
+			iExpLeft = std::floor(log10(fabs(left)));
+			iLeft = left * pow<int64_t>(10, (long int)sigdigits - iExpLeft - 1) + dRound;
+		}
+		if (right != 0) {
+			iExpRight = right == 0 ? 0 : std::floor(log10(fabs(right)));
+			iRight = right * pow<int64_t>(10, (long int)sigdigits - iExpRight - 1) + dRound;
+		}
+ 
+		//bOK = iExpLeft == iExpRight && sigdigits > 0;	
+			
 		bOK = iLeft == iRight;
 	}
 
@@ -53,8 +69,44 @@ bool FloatUtils::frexEqual(long double left, long double right, size_t sigdigits
 	}
 	return bOK;
 }
-
-
+/**
+* @param bNaNMatch set to true to consider two NaNs as equal
+* @return returns the match status
+		* -1 definitely not a match
+		*  0 could be a match
+		*  1 definitely a match
+*/
+int FloatUtils::edgeCases(long double left, long double right, bool bInfMatch, bool bNaNMatch) {
+	int iRet = 0;
+	int aclass = fpclassify(left);
+	int bclass = fpclassify(right);
+	if (aclass == bclass) {
+		switch (aclass) {
+		case FP_INFINITE:
+			if ((left > 0) == (right > 0)) {
+				iRet = bInfMatch;
+			}
+			else {
+				iRet = -1;
+			}
+			break;
+		case FP_NAN:
+			iRet = bNaNMatch ? 1 : 0;
+			break;
+		case FP_ZERO:
+			iRet = 1;
+			break;
+		case FP_SUBNORMAL:
+		case FP_NORMAL:
+		default:
+			break;
+		}
+	}
+	else {
+		iRet = std::isfinite(left) && std::isfinite(right) ? 0 : -1;
+	}
+	return iRet;
+}
 
 std::vector<double> FloatUtils::generateSteps(double dBegin, double dEnd, size_t tNum)
 {
@@ -149,6 +201,29 @@ std::string FloatUtils::fpclassifyString(int fpclass)
 		break;
 	}
 	return sRet;
+}
+
+long double FloatUtils::truncDiff(long double a, long double b)
+{
+	long double c = a - b;
+	int iLeftExp = std::floor(std::log10(c));
+	int iRightExp = std::floor(std::log10(std::fabs(std::max(a, b))));
+	int d = 16 - (iRightExp - iLeftExp);
+	long int i = c * std::pow(10, d - iLeftExp);
+	double cd = i * std::pow(10, iLeftExp - d);
+	cd = std::nextafter(cd, DBL_MAX);
+	return cd;
+}
+
+long double FloatUtils::diffZeroRel(long double a, long double b, long double eps)
+{
+	return essentiallyEqual(a,b,eps) ? 0.0 : a - b;
+}
+
+long double FloatUtils::diffZeroAbs(long double a, long double b, long double eps)
+{
+	double d = a - b;
+	return fabs(d) < fabs(eps) ? 0. : d;
 }
 
 double FloatUtils::reduceOp(double dLeft, RED_OP e, double dRight)

@@ -138,6 +138,19 @@ std::string StringUtils::trim(const std::string & str, bool bExtend)
 	return iFirst <= iEnd ? str.substr(iFirst, iEnd - iFirst + 1) : std::string();
 }
 
+std::string StringUtils::trimChar(const std::string & str, char c)
+{
+	int iFirst = 0;
+	int iEnd = str.size() - 1;
+	while (iFirst <= iEnd && str[iFirst] == c) {
+		++iFirst;
+	}
+	while (iEnd >= iFirst && str[iEnd] == c) {
+		--iEnd;
+	}
+	return iFirst <= iEnd ? str.substr(iFirst, iEnd - iFirst + 1) : std::string();
+}
+
 bool StringUtils::isTrue(std::string str)
 {
 	for (char &c : str) {
@@ -251,7 +264,7 @@ std::string StringUtils::filterInclude(const std::string & str, const std::set<c
 	return sRet;
 }
 
-std::string StringUtils::to_string(double d, int iPrecision)
+std::string StringUtils::d2string(double d, int iPrecision)
 {
 	std::stringstream ss;
 	ss << std::fixed << setprecision(iPrecision) << d;
@@ -271,4 +284,36 @@ int StringUtils::isalfloat(int c)
 int StringUtils::isalfloatsign(int c)
 {
 	return isalnum(c) || c == '.' || c == '-' || c == '+';
+}
+
+int StringUtils::isInt(const std::string & s, std::string & sPrefix, int & i, std::string & sPostfix)
+{
+	int iRet = 1;
+	int n = s.find_first_of("0123456789");
+	if (n != std::string::npos) {
+		if (n > 0 && (s[n - 1] == '-')) {
+			--n;
+		}
+		if (n > 0) {
+			sPrefix = s.substr(0, n);
+		}
+		else {
+			sPrefix = "";
+		}
+		int m = s.find_first_not_of("0123456789", n + 1);
+		if (m != std::string::npos) {
+			i = atoi(s.substr(n, m).c_str());
+			sPostfix = s.substr(m);
+			iRet = 3;
+		}
+		else {
+			i = atoi(s.substr(n).c_str());
+			sPostfix = "";
+			iRet = 2;
+		}
+	}
+	else {
+		sPrefix = s;
+	}
+	return iRet;
 }

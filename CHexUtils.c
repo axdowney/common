@@ -1,5 +1,6 @@
 #include "CHexUtils.h"
 #include <string.h>
+#include <stdlib.h>
 /*unsigned char *hexEncode(unsigned char *szOrigin, size_t iSize) {
     return szOrigin;
 }
@@ -75,4 +76,45 @@ int HexDecode(const unsigned char *szOrigin, size_t iOriginSize, unsigned char *
 
     return iRet;
     return 0;
+}
+
+int StrToDigits(const char * cz, int iSize, int * iarr, int iBase)
+{
+	int iRet = 0;
+	if (1 < iBase && iBase < 37) {
+		for (iRet = 0; iRet < iSize; ++iRet) {
+			if ('0' <= cz[iRet] && cz[iRet] <= '9') {
+				iarr[iRet] = cz[iRet] - '0';
+			}
+			else if ('A' <= cz[iRet] && cz[iRet] <= 'Z') {
+				iarr[iRet] = cz[iRet] - 'A' + 10;
+			}
+			else if ('a' <= cz[iRet] && cz[iRet] <= 'z') {
+				iarr[iRet] = cz[iRet] - 'a' + 10;
+			}
+			else {
+				break;
+			}
+		}
+	}
+	return iRet;
+}
+
+int BigNumDiv(int * iarr, int iSize, int iBase, int iDivisor, int * iaQuot, int * iRem, int *iStart)
+{
+
+	int iRet = 0;
+	*iRem = 0;
+	*iStart = 0;
+	for (; iRet < iSize; ++iRet) {
+		//++iMine;
+		*iRem = (*iRem) * iBase + iarr[iRet];
+		div_t ans = div(*iRem, iDivisor);
+		iaQuot[iRet] = ans.quot;
+		*iRem = ans.rem;
+		if (iaQuot[*iStart] == 0) {
+			++(*iStart);
+		}
+	}
+	return iRet;
 }

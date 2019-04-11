@@ -10,6 +10,7 @@ unsigned char hexToChar(unsigned char c);
 int HexEncode(const unsigned char *szOrigin, size_t iOriginSize, unsigned char *szDest, size_t iDestSize, int iUpper);
 /*int hexEncode(unsigned char *szOrigin, size_t iOriginSize, unsigned char *szDest, size_t iDestSize);*/
 int HexDecode(const unsigned char *szOrigin, size_t iOriginSize, unsigned char *szDest, size_t iDestSize);
-
+int StrToDigits(const char *cz, int iSize, int *iarr, int iBase);
+int BigNumDiv(int *iarr, int iSize, int iBase, int iDivisor, int *iaQuot, int *iRem, int *iStart);
 #endif
 
